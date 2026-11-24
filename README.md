@@ -34,7 +34,7 @@ The presenter needs access to the cluster release’s `cli` and `oauth-proxy` co
 | 3 · Optional content safety | `./grlab content` | Private vLLM Service for Nemotron, input and output verdicts on top of the local checks |
 | 4 · Test the application | `./grlab test` | Checks the active profile, including the browser stream and optional classifier reason |
 | 5 · Optional cleanup | `./grlab cleanup` | Reconnects the app to the original model, verifies chat and tool use, then removes NeMo |
-| Appendix · Rule catalog | `./grlab catalog choose` | Choose a category, inspect the example and control, then stage one rule |
+| Appendix · Any time | `./grlab catalog choose` | Choose, rehearse, preview and test rules before or after the numbered modules |
 
 For Pre-1, set `MAIN_BASE_URL` to the provider's actual OpenAI-compatible base URL ending in `/v1` and `MAIN_MODEL_ID` to its exact tool-capable model ID. Optionally set `MAAS_SUBSCRIPTION`. Provide a private one-line key file via `MAIN_API_KEY_FILE` or an existing `grlab-main` Secret with key `api-key`. Follow the hidden-prompt example in **Pre-1**. The deployer creates the Secret once. The protected app uses an internal dummy client key, and NeMo reads the real upstream key from the Secret. A cluster with private CAs must supply the provider trust chain to the app and NeMo images.
 
@@ -42,20 +42,21 @@ Use `./grlab test --expect rules` or `--expect content` for final signoff on a p
 
 The hosted playground uses the signed-in Showroom Route. In its Terminal, use `http://grlab-agent:8080`. Workstation users can run `oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080` and open [the playground](http://127.0.0.1:18080/).
 
-## Choose and demonstrate a rule
+## Use the appendix at any time
 
-Open [the appendix](showroom/www/modules/en/appendix-rules.html). Select a category and open a rule to see the input or candidate reply, its expected result, an allowed control and ready-to-run commands. The 53 choices cover 27 deterministic banking rules, 23 model categories and three classifier controls. Module 2 uses local checks. Module 3 initially configures S1–S13, with S14–S23 individually available. The appendix also indexes the 33 manifest families and 78 stock flow names in NeMo 0.24.1 for authors extending the workshop.
+Open [the appendix](showroom/www/modules/en/appendix-rules.html) before Pre-1, during a module or after cleanup. The picker and reference appendix work offline. Its 53 choices span 27 local banking rules, 23 model categories and three classifier settings; the included NeMo 0.24.1 reference lists 33 manifest families and 78 named surfaces.
 
 ~~~bash
-./grlab catalog list customer-care
-./grlab catalog sample marketing-consent
 ./grlab catalog add marketing-consent
 ./grlab catalog apply --dry-run
-./grlab catalog apply
-./grlab catalog test marketing-consent
+./grlab catalog test --local marketing-consent
 ~~~
 
-The first example blocks “Enroll this customer in marketing without consent.” Its control asks how a customer changes marketing preferences. Use `catalog remove marketing-consent` and then `catalog apply` to reverse this addition. To assemble a policy from scratch, stage `./grlab catalog baseline empty`, add the first rule and preview before publishing. To restore the shipped choices, stage `./grlab catalog baseline defaults` and apply. The local selection lives in `policies/selection.yaml`. Use `catalog status` to compare local overrides with the running profile. After changing an output rule, use the supplied candidate reply to obtain repeatable evidence.
+The first example blocks “Enroll this customer in marketing without consent” and allows “How does a customer change marketing preferences?” Staging and local rehearsal need Python and PyYAML, not an OpenShift login, model credential or GPU. Add `--local` to `apply --dry-run` to skip cluster inspection. Use `catalog test --live RULE_ID` only when you need evidence from the mounted policy. From a new project, `catalog apply` can provision the missing app and NeMo stages; after cleanup, it can reconnect the existing app. A live publication needs the configured main model and credential.
+
+Stage `./grlab catalog baseline empty` to build a policy one rule at a time, or `./grlab catalog baseline defaults` to restore the shipped choices. Changes stay in `policies/selection.yaml` until publication. The appendix reports example-only outcomes for model categories unless live classifier inference is available.
+
+When upgrading an existing Showroom without replacing its pod, run `./scripts/update-running-appendix.sh` from the full repository with authenticated `oc` and `LAB_NAMESPACE` set. It updates the current Terminal CLI while preserving its rule files and local choices. To refresh the hosted page and seed future terminals, deploy the repository with `./grlab showroom`; save participant workspace edits before that rollout.
 
 ## Source map
 
@@ -68,6 +69,7 @@ The first example blocks “Enroll this customer in marketing without consent.�
 | `policies/` | Catalog, saved choices, deterministic banking checks, flow lists and classifier prompts |
 | `deploy/` | Namespace-scoped manifests for the guide, app, proxy, model and ingress policies |
 | `scripts/lab.py`, `scripts/policy.py` | Stage deployment, configuration rendering and rollback |
+| `scripts/appendix.py`, `scripts/catalog_cli.py`, `scripts/rulebook.py` | Standalone rule rehearsal, preview, selection and live publication |
 | `scripts/verify.py`, `scripts/probe_model.py`, `tests/` | HTTP acceptance checks, model-service inference probe and repeatable local integration tests |
 | `skills/deploy-guardrail-agent-showroom/SKILL.md` | OpenShift deployment skill |
 

@@ -100,89 +100,98 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Use this page after <a href="module-2.html" class="xref page">Module 2</a> or <a href="module-3.html" class="xref page">Module 3</a>. Choose a category, open a rule and compare its example with an allowed control. The catalog has 27 local banking rules, 23 Nemotron categories and three classifier settings. Each card names the module, direction and default state. You can browse the entire catalog offline.</p>
+<p>Start here at any point in the workshop, including before Pre-1 or after cleanup. Open the <strong>Terminal</strong> tab in the hosted Showroom, or use the <a href="_attachments/lab-files.zip" class="xref attachment">participant code</a> on a workstation with Python 3.10+ and PyYAML. Local examples, selection and preview work without a cluster login, GPU or model credential.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_add_one_rule_to_your_application"><a class="anchor" href="#_add_one_rule_to_your_application"></a>Add one rule to your application</h2>
+<h2 id="_try_one_rule_now"><a class="anchor" href="#_try_one_rule_now"></a>Try one rule now</h2>
 <div class="sectionbody">
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Select <strong>Consent and customer care</strong> and <strong>Marketing enrollment without consent</strong>. The input example is “Enroll this customer in marketing without consent.” The allowed control is “How does a customer change marketing preferences?”</p>
-</li>
-<li>
-<p>Select <strong>Run</strong> beside the rehearsal command to see the local decision and its reason. Select <strong>Run</strong> beside the add command to save this choice in the Terminal&#8217;s <code>policies/selection.yaml</code>. The web filters only narrow the list. The add and remove commands edit the saved selection.</p>
-</li>
-<li>
-<p>Preview and publish the change to the active NeMo profile. Publishing rolls the proxy and checks both ordinary chat and the balance lookup.</p>
-</li>
-<li>
-<p>Run the deployed example. In the <strong>Banking playground</strong>, send the two messages separately. The first returns a privacy refusal. The control can reach the main model.</p>
-</li>
-</ol>
+<div class="paragraph">
+<p>Select <strong>Consent and customer care</strong> and <strong>Marketing enrollment without consent</strong> in the picker below. Compare “Enroll this customer in marketing without consent.” with “How does a customer change marketing preferences?” The local rule blocks the enrollment and allows the question. Clicking <strong>Run</strong> sends the indicated command to the signed-in Terminal.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog sample marketing-consent
-./grlab catalog add marketing-consent
-./grlab catalog apply --dry-run</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog add marketing-consent
+./grlab catalog apply --dry-run
+./grlab catalog test --local marketing-consent</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>The first command saves your choice in <code>policies/selection.yaml</code>. A dry run lists the selected rules, explains the baseline and prints the live steps for your project if it can read them. Before a live policy exists it uses the workshop defaults and your edits. In an active rules or content profile it compares the mounted revision. From a laptop, <code>./grlab catalog apply --local --dry-run</code> skips all OpenShift requests. <code>./grlab catalog choose</code> lets you pick the category, rule and action entirely in the shell.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_publish_when_you_want_a_live_policy"><a class="anchor" href="#_publish_when_you_want_a_live_policy"></a>Publish when you want a live policy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Live publication uses the project in <code>LAB_NAMESPACE</code> and your current OpenShift identity. A fresh project needs a reachable tool-capable model, its exact <code>MAIN_MODEL_ID</code>, a <code>MAIN_BASE_URL</code> ending in <code>/v1</code>, and either <code>grlab-main/api-key</code> or a private one-line file referenced by <code>MAIN_API_KEY_FILE</code>. Set <code>MAAS_SUBSCRIPTION</code> if your gateway requires it. Follow the <a href="pre-1.html" class="xref page">provider setup</a> for the hidden key prompt. You can return straight to this appendix after setting the variables.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Your current state</th>
+<th class="tableblock halign-left valign-top">What <code>./grlab catalog apply</code> does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Empty workshop project</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deploys and checks the banking app, inserts NeMo and publishes the chosen rules.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Direct app, including after cleanup</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Keeps the existing app and provider. Inserts NeMo and publishes the choices.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NeMo in bootstrap</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Activates the chosen rules on the existing proxy.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Rules or content active</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Keeps the active profile and updates its policy only when the selection changes.</p></td>
+</tr>
+</tbody>
+</table>
 <div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog apply
-./grlab catalog test marketing-consent</code></pre>
+./grlab catalog test --live marketing-consent</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>To undo just this addition, use the following commands. Other saved choices remain active.</p>
-</div>
-<div class="listingblock execute">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog remove marketing-consent
-./grlab catalog apply</code></pre>
-</div>
+<p>Use the <strong>Banking playground</strong> to try both messages through the application. <code>catalog test</code> uses the deployed rule when available, otherwise it rehearses locally and labels the result. <code>--live</code> requires an actual result from the mounted policy and exits with an error if it cannot obtain one. Testing an output rule uses the supplied candidate assistant reply to make the example repeatable.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_build_a_policy_one_rule_at_a_time"><a class="anchor" href="#_build_a_policy_one_rule_at_a_time"></a>Build a policy one rule at a time</h2>
+<h2 id="_build_from_zero_or_remove_a_choice"><a class="anchor" href="#_build_from_zero_or_remove_a_choice"></a>Build from zero or remove a choice</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When you want to demonstrate even the default rules from a blank starting point, stage an empty catalog in the dedicated lab project. This replaces all saved choices in this Terminal. Add the first rule <strong>before</strong> publishing. This example puts only the credential detector into the guarded path.</p>
-</div>
-<div class="listingblock execute">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog baseline empty
-./grlab catalog add credential
-./grlab catalog apply --dry-run</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Publish with <code>./grlab catalog apply</code>, then use <code>./grlab catalog test credential</code>. Add each subsequent rule with <code>catalog add RULE_ID</code> and publish again. To build a classifier policy from this starting point, stage both a direction such as <code>model-input</code> and a category such as <code>s16</code> before publishing to the Module 3 profile. To return to the original workshop selection, stage <code>./grlab catalog baseline defaults</code>, preview, then apply. Use <a href="module-5.html" class="xref page">Module 5</a> if your intended outcome is to remove the proxy entirely.</p>
+<p>To stage a completely new selection, run <code>./grlab catalog baseline empty</code>, then add the first rule. Preview before publishing. <code>./grlab catalog remove RULE_ID</code> stages one removal. <code>./grlab catalog baseline defaults</code> stages the original workshop choices. Neither baseline changes the running app until you publish. After <a href="module-5.html" class="xref page">cleanup</a>, local tests and previews keep the app in direct mode. A live apply explicitly puts NeMo back in its request path.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_read_the_evidence_for_each_rule"><a class="anchor" href="#_read_the_evidence_for_each_rule"></a>Read the evidence for each rule</h2>
+<h2 id="_optional_model_categories"><a class="anchor" href="#_optional_model_categories"></a>Optional model categories</h2>
 <div class="sectionbody">
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Local input or output.</strong> <code>catalog sample</code> checks the example and control against that rule in isolation. <code>catalog test</code> checks the functions and selection mounted in the NeMo pod. The latter reports an earlier matching rule if several would block the same example. For output rules such as <code>collections-tone</code>, the sample is a <strong>candidate assistant reply</strong>. This gives a repeatable test independent of what wording the generation model chooses. The control should pass unchanged.</p>
-</li>
-<li>
-<p><strong>Content safety.</strong> Complete Module 3 for live model evidence. Start with <code>./grlab catalog show s16</code>, stage <code>s16</code>, publish and run <code>./grlab catalog test s16</code>. Its example asks for a false government endorsement. Its control asks how to verify an endorsement. A live test requires valid JSON, the selected adverse category and a safe control. A different category, a service error or a malformed verdict does not demonstrate that rule. Model predictions and overlapping categories can change the observed outcome. Use <code>./grlab test --expect content</code> for an application-level check.</p>
-</li>
-<li>
-<p><strong>Direction and scope.</strong> <code>model-input</code> and <code>model-output</code> control classifier calls independently. For a category to run, enable at least one direction and select that category. With both directions disabled, the content profile still has a deployed model but makes no classifier calls. The two direction samples use harassment as their example and need <code>s10</code> or comparable banking policy coverage. The banking addendum is a separate choice that can cover the same behavior as a category.</p>
-</li>
-<li>
-<p><strong>Live and local.</strong> <code>./grlab catalog status</code> lists active rules and local edits. <code>./grlab catalog choose</code> offers the same category and rule selection in a terminal. Repeated additions are idempotent. Rules-only mode saves model choices for Module 3 and uses the main model for answers. Copy <code>policies/selection.yaml</code> somewhere durable if you want to reuse the choices after rebuilding a Showroom pod.</p>
-</li>
-</ul>
+<div class="paragraph">
+<p>The catalog includes 27 local rules, 23 Nemotron safety categories and three classifier settings. The initial content profile enables S1–S13, input and output classification, and a banking-policy addendum. Select any additional category, for example <code>s16</code> for fraud or deception. From an empty selection, also add <code>model-input</code> or <code>model-output</code>.</p>
+</div>
+<div class="listingblock execute">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab catalog add s16
+./grlab catalog show s16
+./grlab catalog apply --dry-run --with-content</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For a real model verdict run <code>./grlab catalog apply --with-content</code>, then <code>./grlab catalog test --live s16</code>. The first command can provision the optional GPU model and 30 GiB cache from any stage. See <a href="module-3.html" class="xref page">model capacity and storage requirements</a>. Without a classifier, the example displays the expected outcome. Live verification requires a valid attributed unsafe verdict and a safe control. Use <code>./grlab test</code> to exercise the entire banking app.</p>
 </div>
 </div>
 </div>
@@ -968,18 +977,10 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_what_continues_to_apply"><a class="anchor" href="#_what_continues_to_apply"></a>What continues to apply</h2>
+<h2 id="_additional_nemo_integrations"><a class="anchor" href="#_additional_nemo_integrations"></a>Additional NeMo integrations</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The API validates message roles, the banking tool enforces its own fixture-account allowlist, and the app removes internal decision markers. NeMo validates its input format and size. While classifier checks are enabled, an unavailable classifier or invalid verdict produces a refusal. Multiple enabled controls can cover the same request. Use only synthetic examples when comparing profiles or testing direct mode.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_nemo_0_24_1_built_in_flow_reference"><a class="anchor" href="#_nemo_0_24_1_built_in_flow_reference"></a>NeMo 0.24.1 built-in flow reference</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The table lists the 33 rail manifests and all 78 named surfaces shipped with the pinned NeMo package. These are integration points for authors extending this repository. Vendor APIs, retrieval flows, fact-checkers and additional model rails can require their own credentials, model, knowledge base or agent wiring. The workshop picker above contains the configured, independently selectable policies for this banking application. To add a new local detector, add a catalog entry with a unique ID, phase, pattern, sample and allowed control, then rebuild the guide. Use the reference for other integrations.</p>
+<p>The following reference covers the 33 manifests and 78 named surfaces in NeMo 0.24.1. Some require a separate provider, model, retrieval service or additional application wiring. The selector above lists the rules configured for this banking workshop. The API continues to validate message roles, and the account tool checks its own allowlist in direct and guarded modes.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -1293,10 +1294,7 @@
 </tbody>
 </table>
 <div class="paragraph">
-<p>See <a href="https://docs.nvidia.com/nemo/guardrails/v0.24.1/reference/rail-engine-support">NeMo rail and engine support</a> and <a href="https://build.nvidia.com/nvidia/llama-3_1-nemotron-safety-guard-8b-v3/modelcard">Nemotron Safety Guard v3 model card</a>.</p>
-</div>
-<div class="paragraph">
-<p>Return to <a href="module-4.html" class="xref page">testing the application</a> or <a href="module-5.html" class="xref page">restoring the direct model connection</a>.</p>
+<p>See <a href="https://docs.nvidia.com/nemo/guardrails/v0.24.1/reference/rail-engine-support">NeMo rail support</a> and the <a href="https://build.nvidia.com/nvidia/llama-3_1-nemotron-safety-guard-8b-v3/modelcard">Nemotron model card</a>.</p>
 </div>
 </div>
 </div>

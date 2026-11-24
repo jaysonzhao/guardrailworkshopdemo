@@ -87,23 +87,21 @@ The content step deploys NVIDIA Llama 3.1 Nemotron Safety Guard 8B v3 on vLLM, w
 
 ## Select and demonstrate a rule by category
 
-Use the appendix or `./grlab catalog list`. The 53 individually selectable entries span eight categories, covering 27 local rules, 23 model categories and three classifier settings. Use `./grlab catalog choose` interactively, or select a named ID. Start with the user's chosen category. For local rules, read the published sample, its control and the intended decision. Output samples are candidate replies. Stage one addition at a time and use the existing active profile.
+Use the appendix at any point, including before Pre-1 or after cleanup. The local picker, saved selections, example checks and dry-run work without OpenShift access, a model credential or a GPU. `./grlab catalog apply --local --dry-run` omits cluster discovery. A normal dry run includes project state when available and compares the mounted profile. The 53 entries span eight categories: 27 local rules, 23 model categories and three classifier settings. The appendix also includes the pinned NeMo 0.24.1 reference of 33 manifest families and 78 named surfaces. Treat those as integration references; some need separate providers, models or application wiring.
 
 ~~~bash
-./grlab catalog list customer-care
-./grlab catalog sample marketing-consent
 ./grlab catalog add marketing-consent
 ./grlab catalog apply --dry-run
-./grlab catalog apply
-./grlab catalog test marketing-consent
-./grlab catalog status
+./grlab catalog test --local marketing-consent
 ~~~
 
-Expect a block for “Enroll this customer in marketing without consent.” Expect the question “How does a customer change marketing preferences?” to pass. Run the check in the deployed policy and try the same prompts in the playground. To undo one change, run `./grlab catalog remove marketing-consent` followed by `./grlab catalog apply`. Publication references a new immutable ConfigMap, checks the running application and restores the prior revision if that acceptance check fails. The subsequent named sample is a separate check. If the named sample fails, inspect the reason and remove or revise the choice before republishing. Keep the local overrides in `policies/selection.yaml` for reuse after a workspace rebuild.
+Expect enrollment without consent to be blocked and the preference question to pass. Use `./grlab catalog test --live RULE_ID` when you need evidence from the deployed policy. Model-category examples are labeled as examples unless a live classifier verdict is available. Output samples are candidate assistant replies, so the local checks are repeatable.
 
-When the participant wants to build a policy one rule at a time from zero, stage `./grlab catalog baseline empty`, add their first local rule and preview before publishing. The baseline command replaces the saved local overrides. Restore the shipped catalog with `./grlab catalog baseline defaults` and a new apply.
+Use `./grlab catalog baseline empty` to build a policy one rule at a time; `./grlab catalog baseline defaults` restores the workshop selection. Staging does not change the live app. A live `./grlab catalog apply` can prepare missing workshop stages in a new project, reuse the current app after cleanup, or update the active policy. A fresh project needs `MAIN_MODEL_ID`, a reachable `MAIN_BASE_URL` ending in `/v1`, and `grlab-main/api-key` or `MAIN_API_KEY_FILE`. Use `--with-content` only when GPU-backed classifier provisioning is requested.
 
 Model categories only execute in the content profile. The initial prompt includes S1–S13. To demonstrate S16 with the GPU, select `s16`, confirm at least one classifier direction is enabled, publish the change and run `./grlab catalog test s16`. Require a valid matching model attribution for the adverse example and a valid safe control. Report different categories, false positives and unavailable inference separately. The appendix also includes the complete pinned upstream flow reference for extending the lab.
+
+For an existing Showroom, `./scripts/update-running-appendix.sh` upgrades the current Terminal CLI in place and preserves local rules and selections. Publishing the full repository with `./grlab showroom` refreshes the guide and future Terminal workspaces; save participant edits before replacing the pod.
 
 ## Optional Module 5 · return the running app to the original model
 

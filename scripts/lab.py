@@ -262,14 +262,14 @@ def check_target():
 def main():
     here = sys.modules[__name__]
     if sys.argv[1:2] == ["catalog"]:
-        from catalog_cli import run
+        from appendix import run
         run(here, sys.argv[2:])
         return
     parser = argparse.ArgumentParser(prog="grlab", description=__doc__)
     sub = parser.add_subparsers(dest="step", required=True)
     for name, help_text in (("showroom","deploy the signed-in guide and terminal"),("pre-1","deploy the app in direct mode"),
                             ("nemo","deploy the NeMo proxy"),("rules","activate deterministic rules"),
-                            ("content","deploy and attach the GPU classifier"),("catalog","browse and customize individual rules")):
+                            ("content","deploy and attach the GPU classifier"),("catalog","use the standalone rule appendix")):
         sub.add_parser(name, help=help_text)
     test = sub.add_parser("test", help="verify the application and active mode")
     test.add_argument("--expect", choices=("direct", *STAGES))
