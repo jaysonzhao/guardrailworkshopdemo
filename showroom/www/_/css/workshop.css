@@ -1,0 +1,7 @@
+/* Keep the workshop's executable listings discoverable by mouse, keyboard and touch. */
+.doc .listingblock.execute .source-toolbox,
+.doc .listingblock:focus-within .source-toolbox { visibility: visible; }
+.doc .listingblock.execute pre.highlight { padding-top: 2.1rem; }
+.doc .source-toolbox .paste-button { width: auto; min-width: 3.2rem; gap: .3rem; }
+.doc .source-toolbox .paste-button::after { content: "Run"; font-size: .8rem; }
+.doc .source-toolbox .paste-icon { width: 1rem; height: 1rem; }

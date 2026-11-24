@@ -7,10 +7,8 @@
     <link rel="prev" href="pre-1.html">
     <link rel="next" href="module-2.html">
     <meta name="generator" content="Antora 3.1.12">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&family=Red+Hat+Text:wght@400;700&display=swap">
     <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/workshop.css">
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -98,9 +96,9 @@
 <div class="paragraph">
 <p>Place a working proxy in the model path while keeping the app&#8217;s banking behavior observable. This stage uses an empty set of policy flows. The app sends tool-capable, non-streaming model requests to NeMo. The browser can still receive streamed events from the agent.</p>
 </div>
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python scripts/lab.py nemo
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab nemo
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent deploy/grlab-rails svc/grlab-rails
 oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- printenv BASE_URL
 oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
@@ -115,9 +113,9 @@ oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
 <div class="sect1">
 <h2 id="_verify_the_cutover"><a class="anchor" href="#_verify_the_cutover"></a>Verify the cutover</h2>
 <div class="sectionbody">
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python scripts/lab.py test</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab test</code></pre>
 </div>
 </div>
 <div class="paragraph">

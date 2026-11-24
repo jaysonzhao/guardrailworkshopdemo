@@ -1,3 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grlab-showroom
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grlab-showroom"}}'
+    serviceaccounts.openshift.io/oauth-redirecturi.primary: /oauth/callback
+automountServiceAccountToken: false
+---
+# A dedicated client secret recognized by the OpenShift OAuth server. Only the
+# OAuth container mounts its token. The account has no workshop RoleBinding.
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: grlab-oauth-client
+  annotations: {kubernetes.io/service-account.name: grlab-showroom}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grlab-showroom
+  annotations: {service.beta.openshift.io/serving-cert-secret-name: grlab-showroom-tls}
+spec:
+  selector: {app: grlab-showroom}
+  ports: [{name: https, port: 443, targetPort: oauth}]
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: grlab-showroom
+  annotations: {haproxy.router.openshift.io/timeout-tunnel: 1h}
+spec:
+  to: {kind: Service, name: grlab-showroom}
+  port: {targetPort: https}
+  tls: {termination: reencrypt, insecureEdgeTerminationPolicy: Redirect}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: grlab-showroom-ingress}
+spec:
+  podSelector: {matchLabels: {app: grlab-showroom}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {policy-group.network.openshift.io/ingress: ""}}
+          podSelector: {}
+      ports: [{port: 8443, protocol: TCP}]
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata: {name: grlab-showroom}
@@ -7,35 +56,90 @@ spec:
   template:
     metadata: {labels: {app: grlab-showroom}}
     spec:
+      serviceAccountName: grlab-showroom
       automountServiceAccountToken: false
       securityContext: {seccompProfile: {type: RuntimeDefault}}
-      containers:
-        - name: web
+      initContainers:
+        - name: install-oc
+          image: CLI_IMAGE
+          command: [/bin/sh, -ec, 'cp "$(command -v oc)" /opt/oc/oc && chmod 0755 /opt/oc/oc && /opt/oc/oc version --client']
+          volumeMounts: [{name: cli, mountPath: /opt/oc}]
+          securityContext: &restricted {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        - name: seed-workspace
           image: SITE_IMAGE
-          ports: [{name: http, containerPort: 8080}]
-          readinessProbe: {httpGet: {path: /index.html, port: http}}
-          resources: {requests: {cpu: 25m, memory: 32Mi}, limits: {cpu: 500m, memory: 192Mi}}
-          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
----
-apiVersion: v1
-kind: Service
-metadata: {name: grlab-showroom}
-spec: {selector: {app: grlab-showroom}, ports: [{name: http, port: 8080, targetPort: http}]}
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata: {name: grlab-showroom}
-spec:
-  to: {kind: Service, name: grlab-showroom}
-  port: {targetPort: http}
-  tls: {termination: edge, insecureEdgeTerminationPolicy: Redirect}
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata: {name: grlab-showroom-ingress}
-spec:
-  podSelector: {matchLabels: {app: grlab-showroom}}
-  policyTypes: [Ingress]
-  ingress:
-    - from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: openshift-ingress}}}]
-      ports: [{port: 8080, protocol: TCP}]
+          command: [python3, /opt/showroom/portal/seed.py]
+          volumeMounts: [{name: workspace, mountPath: /workspace}]
+          securityContext: *restricted
+      containers:
+        - name: oauth
+          image: OAUTH_IMAGE
+          args:
+            - --provider=openshift
+            - --openshift-service-account=grlab-showroom
+            - --http-address=
+            - --https-address=:8443
+            - --upstream=http://127.0.0.1:8080
+            - --tls-cert=/run/tls/tls.crt
+            - --tls-key=/run/tls/tls.key
+            - --cookie-secret-file=/run/cookie/key
+            - --cookie-secure=true
+            - --cookie-httponly=true
+            - --cookie-expire=1h
+            - --pass-access-token=true
+            - --pass-user-headers=true
+            - --pass-basic-auth=false
+            - --skip-provider-button=true
+            - --proxy-websockets=true
+            - '--openshift-sar={"namespace":"$(LAB_NAMESPACE)","resource":"pods","verb":"get"}'
+            - --scope=user:info user:check-access role:edit:$(LAB_NAMESPACE):!
+            - --redirect-url=$(SHOWROOM_ORIGIN)/oauth/callback
+          envFrom: [{configMapRef: {name: grlab-showroom-settings}}]
+          ports: [{name: oauth, containerPort: 8443}]
+          readinessProbe: {httpGet: {scheme: HTTPS, port: oauth, path: /oauth/healthz}}
+          resources: {requests: {cpu: 30m, memory: 48Mi}, limits: {cpu: 500m, memory: 192Mi}}
+          securityContext: *restricted
+          volumeMounts:
+            - {name: oauth-client, mountPath: /var/run/secrets/kubernetes.io/serviceaccount, readOnly: true}
+            - {name: tls, mountPath: /run/tls, readOnly: true}
+            - {name: cookie, mountPath: /run/cookie, readOnly: true}
+        - name: portal
+          image: SITE_IMAGE
+          envFrom: [{configMapRef: {name: grlab-showroom-settings}}]
+          readinessProbe:
+            exec:
+              command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',8080),2).close()"]
+          resources: {requests: {cpu: 40m, memory: 64Mi}, limits: {cpu: 500m, memory: 256Mi}}
+          securityContext: *restricted
+          volumeMounts:
+            - {name: sessions, mountPath: /run/workshop}
+            - {name: api-ca, mountPath: /run/api-ca, readOnly: true}
+        - name: terminal
+          image: SITE_IMAGE
+          command: [/usr/local/bin/ttyd]
+          args: [-i, lo, -p, '7681', -b, /terminal, -W, -m, '5', -H, X-Workshop-Session, -t, titleFixed=Guardrail terminal, -t, disableLeaveAlert=true, /opt/showroom/portal/start-shell]
+          env:
+            - name: LAB_NAMESPACE
+              valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+          readinessProbe:
+            exec:
+              command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',7681),2).close()"]
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {cpu: '1', memory: 512Mi}}
+          securityContext: *restricted
+          volumeMounts:
+            - {name: sessions, mountPath: /run/workshop, readOnly: true}
+            - {name: api-ca, mountPath: /run/api-ca, readOnly: true}
+            - {name: cli, mountPath: /opt/oc, readOnly: true}
+            - {name: workspace, mountPath: /workspace}
+      volumes:
+        - name: oauth-client
+          projected:
+            sources:
+              - secret: {name: grlab-oauth-client, items: [{key: token, path: token}]}
+              - configMap: {name: kube-root-ca.crt, items: [{key: ca.crt, path: ca.crt}]}
+              - downwardAPI: {items: [{path: namespace, fieldRef: {fieldPath: metadata.namespace}}]}
+        - {name: api-ca, configMap: {name: kube-root-ca.crt}}
+        - {name: tls, secret: {secretName: grlab-showroom-tls}}
+        - {name: cookie, secret: {secretName: grlab-showroom-cookie}}
+        - {name: sessions, emptyDir: {medium: Memory, sizeLimit: 4Mi}}
+        - {name: cli, emptyDir: {}}
+        - {name: workspace, emptyDir: {sizeLimit: 1Gi}}

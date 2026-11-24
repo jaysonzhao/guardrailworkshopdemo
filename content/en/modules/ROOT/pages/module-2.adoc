@@ -11,11 +11,11 @@ Keep the main LLM for banking answers. Teach NeMo which requests to stop locally
 |Ordinary procedure |“How do I reset my online banking password?” |Give guidance without requesting a credential.
 |===
 
-[source,bash]
+[source,bash,role="execute"]
 ----
 cat policies/rules.yaml
-python scripts/lab.py rules
-python scripts/lab.py test
+./grlab rules
+./grlab test
 ----
 
 The committed configuration has just one model role, `main`. NeMo runs the sequential input flows in `policies/banking.co`. The Python actions distinguish a credential value from a mention of a credential. A human-assistance request returns the official-channel message. The content-safety classifier and the fork's separate topic classifier are absent from this profile.
@@ -34,12 +34,12 @@ if entry not in p.read_text():
     with p.open("a") as target:
         target.write(entry)
 PY
-python scripts/lab.py rules
+./grlab rules
 ----
 
-Repeat the port-forward from Pre-1 if it closed. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.
+Open *Banking playground* above the guide. If you are using a laptop port-forward, restart it after a pod replacement. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.
 
-[source,bash]
+[source,bash,role="execute"]
 ----
 oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
   -o jsonpath='{.spec.template.spec.volumes[0].configMap.name}{"\n"}'

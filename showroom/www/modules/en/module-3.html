@@ -7,10 +7,8 @@
     <link rel="prev" href="module-2.html">
     <link rel="next" href="module-4.html">
     <meta name="generator" content="Antora 3.1.12">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&family=Red+Hat+Text:wght@400;700&display=swap">
     <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/workshop.css">
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -103,10 +101,17 @@
 <div class="sect1">
 <h2 id="_check_model_serving_capacity"><a class="anchor" href="#_check_model_serving_capacity"></a>Check model-serving capacity</h2>
 <div class="sectionbody">
+<div class="listingblock execute">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" get resourcequota</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Node and storage-class inventories are cluster-scoped. Ask the platform operator to run the following checks from their own cluster session.</p>
+</div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" get resourcequota
-oc get storageclass
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get storageclass
 oc get nodes -L nvidia.com/gpu.product \
   -o 'custom-columns=NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product'</code></pre>
 </div>
@@ -125,7 +130,7 @@ oc get nodes -L nvidia.com/gpu.product \
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat policies/content.yaml
-python scripts/lab.py content
+./grlab content
 oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety-guard-vllm pvc/nemotron-safety-guard-model-cache</code></pre>
 </div>
 </div>
@@ -142,8 +147,8 @@ oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python scripts/lab.py rules
-python scripts/lab.py test</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab rules
+./grlab test</code></pre>
 </div>
 </div>
 <div class="paragraph">

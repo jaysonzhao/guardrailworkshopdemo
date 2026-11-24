@@ -6,10 +6,8 @@
     <title>Module 4 · Test the application :: Guardrails for a banking agent on OpenShift</title>
     <link rel="prev" href="module-3.html">
     <meta name="generator" content="Antora 3.1.12">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&family=Red+Hat+Text:wght@400;700&display=swap">
     <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/workshop.css">
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -97,14 +95,17 @@
 <div class="paragraph">
 <p>Run the acceptance checks through the same banking agent and chat API as the playground. The runner detects the active profile. Complete Module 2 first, or finish Module 3 if you want classifier evidence.</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python scripts/lab.py test --expect rules
-# If you completed the GPU step and kept it active, use this command instead.
-# python scripts/lab.py test --expect content
-oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
-  -o jsonpath='{.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'</code></pre>
+<div class="paragraph">
+<p>From the hosted Terminal run the common check to exercise the active profile.</p>
 </div>
+<div class="listingblock execute">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab test
+oc -n "$LAB_NAMESPACE" get deploy/grlab-rails -o 'jsonpath={.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For an explicit acceptance gate, run <code>./grlab test --expect rules</code> or <code>./grlab test --expect content</code> according to the path you completed.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -163,15 +164,23 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
 <h2 id="_try_the_api_yourself"><a class="anchor" href="#_try_the_api_yourself"></a>Try the API yourself</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Keep the port-forward active. In a third terminal, run the following.</p>
+<p>In the hosted Terminal, set the URL to the in-project Service. In a local shell with the Pre-1 port-forward active, set <code>AGENT_URL=http://127.0.0.1:18080</code> instead.</p>
+</div>
+<div class="listingblock execute">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export AGENT_URL=http://grlab-agent:8080</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Send the following application requests. The browser&#8217;s <strong>Banking playground</strong> link sends the same requests through the authenticated Route.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -fsS http://127.0.0.1:18080/health
-curl -fsS http://127.0.0.1:18080/chat/completions \
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -fsS "$AGENT_URL/health"
+curl -fsS "$AGENT_URL/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"How do I reset my online banking password?"}],"stream":false}'
-curl -fsSN http://127.0.0.1:18080/chat/completions \
+curl -fsSN "$AGENT_URL/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"My OTP is 000000."}],"stream":true}'</code></pre>
 </div>
@@ -198,7 +207,7 @@ curl -fsSN http://127.0.0.1:18080/chat/completions \
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The playground is unreachable after a rollout</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Re-run the port-forward. Verify <code>oc -n "$LAB_NAMESPACE" get pods,svc</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Check Pre-1 and the Showroom-to-agent ingress policy. Restart a local port-forward when applicable. Verify <code>oc -n "$LAB_NAMESPACE" get pods,svc</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Both safe chat and account lookup fail</p></td>

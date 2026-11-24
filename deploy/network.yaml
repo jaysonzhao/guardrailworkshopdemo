@@ -1,11 +1,13 @@
-# Participants access the agent with oc port-forward, using project RBAC.
+# The authenticated playground and the project-local terminal share the Showroom pod.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: {name: grlab-agent-ingress}
 spec:
   podSelector: {matchLabels: {app: grlab-agent}}
   policyTypes: [Ingress]
-  ingress: []
+  ingress:
+    - from: [{podSelector: {matchLabels: {app: grlab-showroom}}}]
+      ports: [{port: 8080, protocol: TCP}]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

@@ -4,9 +4,15 @@ Run this module after Module 2 passes. You will serve NVIDIA Llama 3.1 Nemotron 
 
 == Check model-serving capacity
 
-[source,bash]
+[source,bash,role="execute"]
 ----
 oc -n "$LAB_NAMESPACE" get resourcequota
+----
+
+Node and storage-class inventories are cluster-scoped. Ask the platform operator to run the following checks from their own cluster session.
+
+[source,bash]
+----
 oc get storageclass
 oc get nodes -L nvidia.com/gpu.product \
   -o 'custom-columns=NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product'
@@ -21,7 +27,7 @@ The init container fetches the pinned weight revision only when required files a
 [source,bash]
 ----
 cat policies/content.yaml
-python scripts/lab.py content
+./grlab content
 oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety-guard-vllm pvc/nemotron-safety-guard-model-cache
 ----
 
@@ -33,8 +39,8 @@ The model-specific prompts are in `policies/prompts.yml`. An input check require
 
 [source,bash]
 ----
-python scripts/lab.py rules
-python scripts/lab.py test
+./grlab rules
+./grlab test
 ----
 
 This returns traffic to local checks. To release the GPU while preserving the downloaded weights, scale the model to zero after the rules-only test passes.

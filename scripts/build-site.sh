@@ -11,11 +11,11 @@ root = Path.cwd()
 attachment = root / "content/en/modules/ROOT/attachments/lab-files.zip"
 attachment.parent.mkdir(parents=True, exist_ok=True)
 with ZipFile(attachment, "w", ZIP_DEFLATED) as z:
-    for path in [root / "requirements.txt", root / "LICENSE", root / "NOTICE.md"]:
+    for path in [root / "grlab", root / "requirements.txt", root / "LICENSE", root / "NOTICE.md"]:
         z.write(path, "guardrail-agent-lab/" + path.name)
     for folder in ["app", "policies", "deploy", "proxy", "scripts", "tests"]:
         for path in sorted((root / folder).rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc" and path.name != "build-site.sh":
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc" and path.name not in {"build-site.sh", "check_portal.py"}:
                 z.write(path, "guardrail-agent-lab/" + path.relative_to(root).as_posix())
 PY
 # Antora reads a Git worktree. Build a disposable one even from a fresh ZIP.

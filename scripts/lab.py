@@ -2,16 +2,12 @@
 """Deploy one workshop stage into the explicitly selected OpenShift project."""
 import argparse
 import hashlib
-from io import BytesIO
 import json
 import os
 from pathlib import Path
 import subprocess
+import re
 import sys
-import time
-from urllib.error import URLError
-from urllib.request import urlopen
-from zipfile import BadZipFile, ZipFile
 from urllib.parse import urlsplit
 
 import yaml
@@ -63,35 +59,6 @@ def build(name, directory):
     if "@sha256:" not in image:
         raise RuntimeError(f"Missing published image digest for {name}")
     return image
-
-
-def site():
-    if not (ROOT / "showroom/www/index.html").is_file():
-        raise RuntimeError("Build the guide first with scripts/build-site.sh.")
-    dep, svc, route, policy = manifests("showroom.yaml")
-    dep["spec"]["template"]["spec"]["containers"][0]["image"] = build("grlab-showroom", "showroom")
-    for doc in (policy, dep, svc, route):
-        apply(doc)
-    rollout("grlab-showroom")
-    base = "https://" + oc("get", "route/grlab-showroom", "-o", "jsonpath={.spec.host}")
-    print("Guide: " + base, flush=True)
-    last_error = None
-    for attempt in range(20):
-        try:
-            with urlopen(base + "/modules/en/index.html", timeout=8) as page:
-                if b"Guardrails for a banking agent" not in page.read():
-                    raise RuntimeError("unexpected guide page")
-            with urlopen(base + "/modules/en/_attachments/lab-files.zip", timeout=12) as bundle:
-                with ZipFile(BytesIO(bundle.read())) as archive:
-                    if archive.testzip() or "guardrail-agent-lab/scripts/lab.py" not in archive.namelist():
-                        raise RuntimeError("invalid participant download")
-            print("PASS HTTPS guide and participant ZIP")
-            return
-        except (URLError, OSError, BadZipFile, RuntimeError) as exc:
-            last_error = exc
-            if attempt < 19:
-                time.sleep(3)
-    raise RuntimeError(f"Guide deployed but HTTPS delivery was not verified: {last_error}")
 
 
 def configure_provider():
@@ -243,18 +210,19 @@ def activate(stage):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="grlab", description=__doc__)
     parser.add_argument("step", choices=("showroom", "pre-1", "nemo", "rules", "content", "test"))
     parser.add_argument("--expect", choices=STAGES, help="require this active profile when running test")
     args = parser.parse_args()
     if args.expect and args.step != "test":
         parser.error("--expect applies only to the test step")
-    if not NS or NS in {"default", "kube-system", "openshift"} or NS.startswith(("openshift-", "kube-")):
+    if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", NS) or NS in {"default", "kube-system", "openshift"} or NS.startswith(("openshift-", "kube-")):
         parser.error("Set LAB_NAMESPACE to a dedicated application project.")
     oc("whoami")
-    oc("get", "project", NS, "-o", "name")
+    oc("get", "configmap/kube-root-ca.crt", "-o", "name")
     if args.step == "showroom":
-        site()
+        from showroom import deploy
+        deploy(sys.modules[__name__])
     elif args.step == "pre-1":
         pre()
     elif args.step == "test":

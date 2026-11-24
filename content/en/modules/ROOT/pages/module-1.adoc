@@ -2,9 +2,9 @@
 
 Place a working proxy in the model path while keeping the app's banking behavior observable. This stage uses an empty set of policy flows. The app sends tool-capable, non-streaming model requests to NeMo. The browser can still receive streamed events from the agent.
 
-[source,bash]
+[source,bash,role="execute"]
 ----
-python scripts/lab.py nemo
+./grlab nemo
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent deploy/grlab-rails svc/grlab-rails
 oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- printenv BASE_URL
 oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
@@ -15,9 +15,9 @@ Expect the app's `BASE_URL` to be `http://grlab-rails/v1` and the proxy to list 
 
 == Verify the cutover
 
-[source,bash]
+[source,bash,role="execute"]
 ----
-python scripts/lab.py test
+./grlab test
 ----
 
 A healthy app now reports both `agent_initialized` and `guardrails_reachable` as true. A successful synthetic balance lookup checks a second trip through the proxy after the tool returns its result. If plain banking chat succeeds but the lookup fails, inspect the main model's support for OpenAI tool calls and ensure `passthrough: true` is present.

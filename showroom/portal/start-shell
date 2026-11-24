@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+[[ ${TTYD_USER:-} =~ ^[a-f0-9]{24}$ ]] || { echo 'Open Terminal from your signed-in Showroom.'; exit 1; }
+export KUBECONFIG="${SESSION_DIR:-/run/workshop}/$TTYD_USER.json"
+[[ -s "$KUBECONFIG" ]] || { echo 'Session expired. Reopen Terminal.'; exit 1; }
+unset TTYD_USER
+export HOME="${WORKSPACE:-/workspace}"
+cd "$HOME/lab"
+export PATH="$PWD:/opt/oc:$PATH"
+export PS1='[\u@showroom \W]\$ '
+printf 'Project %s. Run oc whoami to check your identity. Run grlab --help for workshop commands.\n' "$LAB_NAMESPACE"
+exec /bin/bash --noprofile --norc -i

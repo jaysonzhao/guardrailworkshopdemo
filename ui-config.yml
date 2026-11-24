@@ -1,11 +1,14 @@
 type: showroom
 antora:
   version: en
-default_width: 40
+default_width: 44
 persist_url_state: true
 view_switcher:
   enabled: true
   default_mode: split
 tabs:
-  - name: OpenShift Console
+  - name: Terminal
+    path: /wetty
+    port: 443
+  - name: OCP Console
     url: 'https://console-openshift-console.${DOMAIN}'

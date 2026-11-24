@@ -4,13 +4,12 @@ Establish that the agent, main model, and balance tool work before introducing a
 
 == Select the project and model
 
-Use your assigned project name in place of the example. If the project already exists, select it with `oc project "$LAB_NAMESPACE"`. For a new personal lab project, run the following.
+The hosted Terminal already sets `LAB_NAMESPACE`. In an independently authenticated laptop or Dev Spaces shell, select your assigned project, then run `export LAB_NAMESPACE="$(oc project -q)"`. An instructor can create a new project with `oc new-project <assigned-project>` before publishing the Showroom.
 
-[source,bash]
+[source,bash,role="execute"]
 ----
-export LAB_NAMESPACE=guardrail-lab-user1
-oc new-project "$LAB_NAMESPACE"
-oc whoami --show-server
+oc whoami
+oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
 oc auth can-i create buildconfigs.build.openshift.io -n "$LAB_NAMESPACE"
 oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"
 ----
@@ -35,14 +34,20 @@ read -rsp 'Main model API key: ' grlab_key
 printf '\n'
 printf '%s' "$grlab_key" > "$MAIN_API_KEY_FILE"
 unset grlab_key
-python scripts/lab.py pre-1
 ----
 
-If you used the hidden prompt, remove the temporary key file after the Secret exists. For an existing Secret, skip the key-file commands and run the deployment directly.
+Deploy the baseline after setting the model values or provisioning the Secret.
+
+[source,bash,role="execute"]
+----
+./grlab pre-1
+----
+
+If you used the hidden prompt, remove the temporary key file after the Secret exists.
 
 [source,bash]
 ----
-rm -f "$MAIN_API_KEY_FILE"
+if [[ -n ${MAIN_API_KEY_FILE:-} ]]; then rm -f "$MAIN_API_KEY_FILE"; fi
 unset MAIN_API_KEY_FILE
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent
 ----
@@ -51,13 +56,11 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent
 
 The last command run by the installer calls the agent over HTTP. Look for `PASS credential-free reset request answered` and `PASS balance tool returned the fixture amount`. The agent's health JSON reports `guardrails_reachable: false` in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.
 
-In a second terminal, enter the same project name and forward the port. Re-run the forward after an agent rollout replaces the pod it was attached to.
+Click *Banking playground* above the hosted guide. Ask “What is the checking balance for my demo account ACCT-12345?” Expect $2,450.00. Both the playground and its chat API use the authenticated Showroom Route. A failure on this query points to the provider's tool-calling support or model selection.
+
+For a laptop-only session, open a second local terminal with an authenticated `oc`, set the assigned project, and forward the port. Then open http://127.0.0.1:18080[the local banking playground]. A port forwarded inside the hosted Terminal listens inside its pod. Use the playground link for your browser.
 
 [source,bash]
 ----
-# In this terminal, replace the example with the assigned project.
-export LAB_NAMESPACE=guardrail-lab-user1
 oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080
 ----
-
-Open http://127.0.0.1:18080[the banking playground] or forward port 18080 from your Dev Spaces workspace. Ask “What is the checking balance for my demo account ACCT-12345?” The checking tool returns $2,450.00. If the model invents an amount or cannot call tools, resolve the endpoint or model selection before Module 1.

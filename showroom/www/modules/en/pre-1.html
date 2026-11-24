@@ -7,10 +7,8 @@
     <link rel="prev" href="index.html">
     <link rel="next" href="module-1.html">
     <meta name="generator" content="Antora 3.1.12">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&family=Red+Hat+Text:wght@400;700&display=swap">
     <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/workshop.css">
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -104,13 +102,12 @@
 <h2 id="_select_the_project_and_model"><a class="anchor" href="#_select_the_project_and_model"></a>Select the project and model</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Use your assigned project name in place of the example. If the project already exists, select it with <code>oc project "$LAB_NAMESPACE"</code>. For a new personal lab project, run the following.</p>
+<p>The hosted Terminal already sets <code>LAB_NAMESPACE</code>. In an independently authenticated laptop or Dev Spaces shell, select your assigned project, then run <code>export LAB_NAMESPACE="$(oc project -q)"</code>. An instructor can create a new project with <code>oc new-project &lt;assigned-project&gt;</code> before publishing the Showroom.</p>
 </div>
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export LAB_NAMESPACE=guardrail-lab-user1
-oc new-project "$LAB_NAMESPACE"
-oc whoami --show-server
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc whoami
+oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
 oc auth can-i create buildconfigs.build.openshift.io -n "$LAB_NAMESPACE"
 oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"</code></pre>
 </div>
@@ -136,16 +133,23 @@ export MAIN_API_KEY_FILE="$(mktemp)"
 read -rsp 'Main model API key: ' grlab_key
 printf '\n'
 printf '%s' "$grlab_key" &gt; "$MAIN_API_KEY_FILE"
-unset grlab_key
-python scripts/lab.py pre-1</code></pre>
+unset grlab_key</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>If you used the hidden prompt, remove the temporary key file after the Secret exists. For an existing Secret, skip the key-file commands and run the deployment directly.</p>
+<p>Deploy the baseline after setting the model values or provisioning the Secret.</p>
+</div>
+<div class="listingblock execute">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab pre-1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you used the hidden prompt, remove the temporary key file after the Secret exists.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">rm -f "$MAIN_API_KEY_FILE"
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">if [[ -n ${MAIN_API_KEY_FILE:-} ]]; then rm -f "$MAIN_API_KEY_FILE"; fi
 unset MAIN_API_KEY_FILE
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent</code></pre>
 </div>
@@ -159,17 +163,15 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent</code></pre>
 <p>The last command run by the installer calls the agent over HTTP. Look for <code>PASS credential-free reset request answered</code> and <code>PASS balance tool returned the fixture amount</code>. The agent&#8217;s health JSON reports <code>guardrails_reachable: false</code> in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.</p>
 </div>
 <div class="paragraph">
-<p>In a second terminal, enter the same project name and forward the port. Re-run the forward after an agent rollout replaces the pod it was attached to.</p>
+<p>Click <strong>Banking playground</strong> above the hosted guide. Ask “What is the checking balance for my demo account ACCT-12345?” Expect $2,450.00. Both the playground and its chat API use the authenticated Showroom Route. A failure on this query points to the provider&#8217;s tool-calling support or model selection.</p>
+</div>
+<div class="paragraph">
+<p>For a laptop-only session, open a second local terminal with an authenticated <code>oc</code>, set the assigned project, and forward the port. Then open <a href="http://127.0.0.1:18080">the local banking playground</a>. A port forwarded inside the hosted Terminal listens inside its pod. Use the playground link for your browser.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># In this terminal, replace the example with the assigned project.
-export LAB_NAMESPACE=guardrail-lab-user1
-oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p>Open <a href="http://127.0.0.1:18080">the banking playground</a> or forward port 18080 from your Dev Spaces workspace. Ask “What is the checking balance for my demo account ACCT-12345?” The checking tool returns $2,450.00. If the model invents an amount or cannot call tools, resolve the endpoint or model selection before Module 1.</p>
 </div>
 </div>
 </div>
