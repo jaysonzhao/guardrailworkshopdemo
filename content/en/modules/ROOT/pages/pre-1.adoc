@@ -1,0 +1,63 @@
+= Pre-1 · Deploy the banking application
+
+Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at `/` and accepts OpenAI-style messages at `POST /chat/completions`. Its LangGraph tool returns fixed balances for workshop account aliases.
+
+== Select the project and model
+
+Use your assigned project name in place of the example. If the project already exists, select it with `oc project "$LAB_NAMESPACE"`. For a new personal lab project, run the following.
+
+[source,bash]
+----
+export LAB_NAMESPACE=guardrail-lab-user1
+oc new-project "$LAB_NAMESPACE"
+oc whoami --show-server
+oc auth can-i create buildconfigs.build.openshift.io -n "$LAB_NAMESPACE"
+oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"
+----
+
+Set the model endpoint and exact model ID issued by your provider. The following host and ID are examples. A model advertised under a different served ID must use that ID in the lab.
+
+[source,bash]
+----
+export MAIN_BASE_URL='https://maas.example.test/llm/gpt-oss-20b/v1'
+export MAIN_MODEL_ID='gpt-oss-20b'
+# Only for a gateway that requires this header
+# export MAAS_SUBSCRIPTION='your-assigned-subscription'
+----
+
+The setup reads `grlab-main/api-key` if that Secret already exists. Otherwise create a private key file outside the repository. Enter the real API key at the hidden prompt. For an approved endpoint that accepts anonymous inference, enter the nonsecret value required by your OpenAI-compatible client. TLS endpoints must present a certificate trusted by the app and proxy containers.
+
+[source,bash]
+----
+umask 077
+export MAIN_API_KEY_FILE="$(mktemp)"
+read -rsp 'Main model API key: ' grlab_key
+printf '\n'
+printf '%s' "$grlab_key" > "$MAIN_API_KEY_FILE"
+unset grlab_key
+python scripts/lab.py pre-1
+----
+
+If you used the hidden prompt, remove the temporary key file after the Secret exists. For an existing Secret, skip the key-file commands and run the deployment directly.
+
+[source,bash]
+----
+rm -f "$MAIN_API_KEY_FILE"
+unset MAIN_API_KEY_FILE
+oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent
+----
+
+== Check the baseline
+
+The last command run by the installer calls the agent over HTTP. Look for `PASS credential-free reset request answered` and `PASS balance tool returned the fixture amount`. The agent's health JSON reports `guardrails_reachable: false` in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.
+
+In a second terminal, enter the same project name and forward the port. Re-run the forward after an agent rollout replaces the pod it was attached to.
+
+[source,bash]
+----
+# In this terminal, replace the example with the assigned project.
+export LAB_NAMESPACE=guardrail-lab-user1
+oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080
+----
+
+Open http://127.0.0.1:18080[the banking playground] or forward port 18080 from your Dev Spaces workspace. Ask “What is the checking balance for my demo account ACCT-12345?” The checking tool returns $2,450.00. If the model invents an amount or cannot call tools, resolve the endpoint or model selection before Module 1.

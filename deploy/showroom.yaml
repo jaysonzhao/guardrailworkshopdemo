@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: grlab-showroom}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: grlab-showroom}}
+  template:
+    metadata: {labels: {app: grlab-showroom}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: web
+          image: SITE_IMAGE
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe: {httpGet: {path: /index.html, port: http}}
+          resources: {requests: {cpu: 25m, memory: 32Mi}, limits: {cpu: 500m, memory: 192Mi}}
+          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grlab-showroom}
+spec: {selector: {app: grlab-showroom}, ports: [{name: http, port: 8080, targetPort: http}]}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata: {name: grlab-showroom}
+spec:
+  to: {kind: Service, name: grlab-showroom}
+  port: {targetPort: http}
+  tls: {termination: edge, insecureEdgeTerminationPolicy: Redirect}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: grlab-showroom-ingress}
+spec:
+  podSelector: {matchLabels: {app: grlab-showroom}}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: openshift-ingress}}}]
+      ports: [{port: 8080, protocol: TCP}]

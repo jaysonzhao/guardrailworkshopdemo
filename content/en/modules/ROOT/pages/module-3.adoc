@@ -1,0 +1,47 @@
+= Module 3 · Add a content safety model (optional)
+
+Run this module after Module 2 passes. You will serve NVIDIA Llama 3.1 Nemotron Safety Guard 8B v3 with vLLM. The main model still generates the banking answer. The new classifier assesses the user message and the candidate reply in separate calls.
+
+== Check model-serving capacity
+
+[source,bash]
+----
+oc -n "$LAB_NAMESPACE" get resourcequota
+oc get storageclass
+oc get nodes -L nvidia.com/gpu.product \
+  -o 'custom-columns=NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product'
+----
+
+Ask the platform operator for available GPU memory and quotas if your account lacks node access. The supplied workload requests one GPU, 4 CPUs and 24 GiB of host memory with limits of 8 CPUs and 48 GiB. It uses BF16, an 8,192-token maximum context and a 30 GiB RWO volume. The source deployment used L40S hardware. Select compatible GPU capacity with sufficient free VRAM for the weights, KV cache and runtime. On a mixed GPU cluster, set the appropriate `nodeSelector` under the Deployment's pod spec before applying it.
+
+The init container fetches the pinned weight revision only when required files are missing. It needs access to Hugging Face on first use. For a restricted network, prepopulate the PVC with the snapshot and blob directories described in `deploy/content-model.yaml`, or skip this module. Set `MODEL_STORAGE_CLASS` before the first run if the project needs a nondefault class. For example, use `export MODEL_STORAGE_CLASS=gp3-csi` only if that class exists in your cluster.
+
+== Deploy, probe and activate
+
+[source,bash]
+----
+cat policies/content.yaml
+python scripts/lab.py content
+oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety-guard-vllm pvc/nemotron-safety-guard-model-cache
+----
+
+The installer first checks the advertised model ID and obtains a benign JSON verdict from the running GPU pod. It then appends `banking content safety input` and `banking content safety output` to the existing flows and switches NeMo to the `content` profile. A cache or model-startup failure leaves the rules-only stage serving. A failed policy activation restores the previous proxy revision.
+
+The model-specific prompts are in `policies/prompts.yml`. An input check requires a safe `User Safety` verdict. A response check also requires a safe `Response Safety` verdict. Unreadable verdicts or unavailable inference result in a refusal. A data-free report of an abusive message should remain permissible. A request to draft personal harassment should produce a content-safety refusal. The test checks the specific decision at the proxy.
+
+== Return to the rules-only workshop
+
+[source,bash]
+----
+python scripts/lab.py rules
+python scripts/lab.py test
+----
+
+This returns traffic to local checks. To release the GPU while preserving the downloaded weights, scale the model to zero after the rules-only test passes.
+
+[source,bash]
+----
+oc -n "$LAB_NAMESPACE" scale deploy/nemotron-safety-guard-vllm --replicas=0
+----
+
+Running the content step again restores the replica and reuses the PVC. To finish with the classifier enabled, keep the `content` profile active and go to xref:module-4.adoc[Module 4].

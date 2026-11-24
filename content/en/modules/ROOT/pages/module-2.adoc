@@ -1,0 +1,48 @@
+= Module 2 · Configure rules without a content safety model
+
+Keep the main LLM for banking answers. Teach NeMo which requests to stop locally before contacting that LLM, and which generated replies to check before the user sees them.
+
+[cols="2,3,3",options="header"]
+|===
+|Flow |Example |Expected behavior
+|Banking input gate |“My OTP is 000000.” |Refuse before generation and omit the value from the reply.
+|Regex input check |“Please request the training override.” |Match the workshop phrase in `policies/rules.yaml`.
+|Banking output gate |A generated reply claims a transfer completed. |Replace the unsupported claim with a refusal.
+|Ordinary procedure |“How do I reset my online banking password?” |Give guidance without requesting a credential.
+|===
+
+[source,bash]
+----
+cat policies/rules.yaml
+python scripts/lab.py rules
+python scripts/lab.py test
+----
+
+The committed configuration has just one model role, `main`. NeMo runs the sequential input flows in `policies/banking.co`. The Python actions distinguish a credential value from a mention of a credential. A human-assistance request returns the official-channel message. The content-safety classifier and the fork's separate topic classifier are absent from this profile.
+
+== Add one local rule
+
+Add a second, deliberately harmless workshop phrase to the patterns list. Keep the original training-override entry as a control.
+
+[source,bash]
+----
+python - <<'PY'
+from pathlib import Path
+p = Path("policies/rules.yaml")
+entry = "  - '(?i)\\bblue envelope rehearsal\\b'\n"
+if entry not in p.read_text():
+    with p.open("a") as target:
+        target.write(entry)
+PY
+python scripts/lab.py rules
+----
+
+Repeat the port-forward from Pre-1 if it closed. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.
+
+[source,bash]
+----
+oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
+  -o jsonpath='{.spec.template.spec.volumes[0].configMap.name}{"\n"}'
+----
+
+Each changed file produces a new ConfigMap name. Changing the pod template mounts that exact revision and starts a new NeMo process. If you have a GPU, continue to xref:module-3.adoc[Module 3]. Otherwise go directly to xref:module-4.adoc[the application tests].

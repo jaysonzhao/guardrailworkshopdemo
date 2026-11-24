@@ -1,0 +1,10 @@
+# These flow names are loaded by NeMo. Order matters.
+input:
+  - banking input gate
+  - regex check input
+output:
+  - banking output gate
+
+# Lab-specific input patterns. Edit and re-run the rules step to publish a revision.
+patterns:
+  - '(?i)\brequest the training override\b'

@@ -1,0 +1,11 @@
+type: showroom
+antora:
+  version: en
+default_width: 40
+persist_url_state: true
+view_switcher:
+  enabled: true
+  default_mode: split
+tabs:
+  - name: OpenShift Console
+    url: 'https://console-openshift-console.${DOMAIN}'

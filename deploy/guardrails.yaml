@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grlab-rails
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: grlab-rails}}
+  template:
+    metadata: {labels: {app: grlab-rails}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: nemo
+          image: PROXY_IMAGE
+          args: ["server", "--config", "/opt/rail-configs", "--default-config-id", PROFILE, "--port", "8000", "--disable-chat-ui"]
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom: {secretKeyRef: {name: grlab-main, key: api-key}}
+          ports: [{name: http, containerPort: 8000}]
+          resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {cpu: "2", memory: 2Gi}}
+          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: policy, mountPath: /opt/rail-configs/PROFILE, readOnly: true}]
+          readinessProbe: {httpGet: {path: /v1/rails/configs, port: http}, periodSeconds: 5}
+          startupProbe: {httpGet: {path: /v1/rails/configs, port: http}, periodSeconds: 5, failureThreshold: 60}
+      volumes: [{name: policy, configMap: {name: POLICY_MAP}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grlab-rails}
+spec:
+  selector: {app: grlab-rails}
+  ports: [{name: http, port: 80, targetPort: http}]

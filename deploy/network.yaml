@@ -1,0 +1,18 @@
+# Participants access the agent with oc port-forward, using project RBAC.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: grlab-agent-ingress}
+spec:
+  podSelector: {matchLabels: {app: grlab-agent}}
+  policyTypes: [Ingress]
+  ingress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: grlab-rails-ingress}
+spec:
+  podSelector: {matchLabels: {app: grlab-rails}}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app: grlab-agent}}}]
+      ports: [{port: 8000, protocol: TCP}]

@@ -1,0 +1,46 @@
+# No define user blocks: preserve the supplied HTTP tool-call passthrough.
+# These named subflows run sequentially through rails.input / rails.output.
+define bot workshop decision
+  "$workshop_reply"
+
+define bot banking human option
+  "For human assistance, please use the bank's official customer-service channel. This demo has not connected you to a live agent."
+
+define bot refuse to respond
+  "I can help with supported banking questions, redacted complaints and document checklists. Please use the bank's official channel for other assistance."
+
+define subflow banking input gate
+  $banking_input_result = execute banking_local_input
+  if not $banking_input_result["allowed"]
+    if $banking_input_result["handoff"]
+      bot banking human option
+    else
+      $reason = $banking_input_result["reason"]
+      $workshop_reply = execute workshop_refusal(rail="banking_input_gate", reason=$reason)
+      bot workshop decision
+    stop
+
+define subflow banking output gate
+  $banking_output_result = execute banking_local_output
+  $bot_message = $banking_output_result["bot_message"]
+  if not $banking_output_result["allowed"]
+    $reason = $banking_output_result["reason"]
+    $workshop_reply = execute workshop_refusal(rail="banking_output_gate", reason=$reason)
+    bot workshop decision
+    stop
+
+define subflow banking content safety input
+  $content_safety_input_result = execute banking_content_input
+  if not $content_safety_input_result["allowed"]
+    $reason = $content_safety_input_result["reason"]
+    $workshop_reply = execute workshop_refusal(rail="content_safety_input", reason=$reason)
+    bot workshop decision
+    stop
+
+define subflow banking content safety output
+  $content_safety_output_result = execute banking_content_output
+  if not $content_safety_output_result["allowed"]
+    $reason = $content_safety_output_result["reason"]
+    $workshop_reply = execute workshop_refusal(rail="content_safety_output", reason=$reason)
+    bot workshop decision
+    stop

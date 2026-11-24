@@ -1,0 +1,6 @@
+# These checks are appended to the local flows in rules.yaml.
+model: nvidia/Llama-3.1-Nemotron-Safety-Guard-8B-v3
+input:
+  - banking content safety input
+output:
+  - banking content safety output

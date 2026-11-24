@@ -1,0 +1,37 @@
+= Guardrails for a banking agent on OpenShift
+
+A customer who asks how to reset a password should get instructions. A customer who types a one-time password into the same chat should get a privacy refusal. You will deploy a LangGraph banking assistant, make that distinction in NeMo Guardrails, and test it through the application your customers would use. All accounts, balances and credentials in the exercises are fictional.
+
+[cols="1,3,3",options="header"]
+|===
+|Module |What you change |How you know it worked
+
+|xref:pre-1.adoc[Pre-1] |Build the banking app and connect its main model. |The playground returns the synthetic checking balance.
+|xref:module-1.adoc[1] |Insert NeMo between the app and the model. |The app uses the proxy and its balance tool still works.
+|xref:module-2.adoc[2] |Apply input and output rules. |A synthetic OTP is blocked and ordinary reset guidance still passes.
+|xref:module-3.adoc[3 · optional] |Serve Nemotron Safety Guard on a GPU and add two classifier calls. |The proxy reports a classifier-specific refusal.
+|xref:module-4.adoc[4] |Exercise the application and inspect the active profile. |The automated check passes through the app on either learning path.
+|===
+
+== Your environment
+
+Use a Linux or Dev Spaces terminal with a current OpenShift 4.x CLI, Python 3.10+ with PyYAML 6, curl and Git or unzip. Use one dedicated project per participant or team. The project needs OpenShift Builds with Docker strategy, the integrated image registry, Routes, and a network plugin enforcing Kubernetes NetworkPolicy. Binary builds need access to the Red Hat UBI images, UBI RPM repositories for the proxy build, and the Python package index. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model's serving ID, its base URL ending in `/v1`, its credential, and the MaaS subscription name if required.
+
+Pre-1 through Module 2 and Module 4 can use a remote MaaS model and need no GPU in your lab project. Only Module 3 provisions model weights. It requires one available BF16-capable NVIDIA GPU with enough free memory for the 8B model, a working GPU device plugin, a 30 GiB RWO PVC, access to the serving image and weights, or a prepopulated cache.
+
+== Get the exercise files
+
+Download xref:attachment$lab-files.zip[the participant code ZIP]. Unzip it in your terminal and change to `guardrail-agent-lab/`. If the instructor gave you the full repository ZIP, change to `guardrail-agent-showroom/` instead. Run all commands in the same shell from that directory.
+
+[source,bash]
+----
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+oc whoami
+oc whoami --show-server
+----
+
+The published guide is available through an HTTPS Route. Access the banking playground through a local port-forward. In a managed RHDP Showroom the OpenShift Console tab is also available when the environment supplies its apps domain.
+
+Next, xref:pre-1.adoc[deploy the banking application].

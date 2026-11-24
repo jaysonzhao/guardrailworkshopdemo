@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: grlab-agent}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: grlab-agent}}
+  template:
+    metadata: {labels: {app: grlab-agent}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: agent
+          image: APP_IMAGE
+          env:
+            - {name: MODEL_ID, valueFrom: {configMapKeyRef: {name: grlab-provider, key: model}}}
+            - {name: BASE_URL, valueFrom: {configMapKeyRef: {name: grlab-provider, key: url}}}
+            - {name: API_KEY, valueFrom: {secretKeyRef: {name: grlab-main, key: api-key}}}
+            - {name: MAAS_SUBSCRIPTION, valueFrom: {configMapKeyRef: {name: grlab-provider, key: subscription}}}
+            - {name: GRLAB_BACKEND_MODE, value: direct}
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 5, timeoutSeconds: 4}
+          startupProbe: {tcpSocket: {port: http}, periodSeconds: 5, failureThreshold: 48}
+          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 200m, memory: 384Mi}, limits: {cpu: "2", memory: 1Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grlab-agent}
+spec: {selector: {app: grlab-agent}, ports: [{name: http, port: 8080, targetPort: http}]}

@@ -1,0 +1,11 @@
+name: modules
+title: Guardrails for a banking agent
+version: en
+display_version: English
+nav:
+  - modules/ROOT/nav.adoc
+asciidoc:
+  attributes:
+    experimental: true
+    page-pagination: true
+    page-lang: en

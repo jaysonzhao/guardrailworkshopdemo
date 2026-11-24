@@ -1,0 +1,6 @@
+* xref:index.adoc[Workshop overview]
+* xref:pre-1.adoc[Pre-1 · Deploy the banking application]
+* xref:module-1.adoc[1 · Deploy NeMo Guardrails]
+* xref:module-2.adoc[2 · Configure banking rules]
+* xref:module-3.adoc[3 · Add content safety (optional)]
+* xref:module-4.adoc[4 · Test the application]

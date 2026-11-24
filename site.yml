@@ -1,0 +1,17 @@
+site:
+  title: Guardrails for a banking agent on OpenShift
+  start_page: en@modules::index.adoc
+content:
+  sources:
+    - url: .
+      branches: HEAD
+      start_path: content/en
+ui:
+  supplemental_files: ./supplemental-ui
+  bundle:
+    url: ./showroom/ui-bundle.zip
+output:
+  dir: ./showroom/www
+runtime:
+  log:
+    failure_level: warn

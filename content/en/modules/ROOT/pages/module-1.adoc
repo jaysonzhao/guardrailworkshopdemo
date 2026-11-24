@@ -1,0 +1,27 @@
+= Module 1 · Deploy NeMo Guardrails
+
+Place a working proxy in the model path while keeping the app's banking behavior observable. This stage uses an empty set of policy flows. The app sends tool-capable, non-streaming model requests to NeMo. The browser can still receive streamed events from the agent.
+
+[source,bash]
+----
+python scripts/lab.py nemo
+oc -n "$LAB_NAMESPACE" get deploy/grlab-agent deploy/grlab-rails svc/grlab-rails
+oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- printenv BASE_URL
+oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
+ 'from urllib.request import urlopen; print(urlopen("http://grlab-rails/v1/rails/configs").read().decode())'
+----
+
+Expect the app's `BASE_URL` to be `http://grlab-rails/v1` and the proxy to list a configuration with ID `bootstrap`. The proxy receives the main provider credential from the Secret. It forwards permitted requests to the same main model as Pre-1 with the configured MaaS subscription header, when used.
+
+== Verify the cutover
+
+[source,bash]
+----
+python scripts/lab.py test
+----
+
+A healthy app now reports both `agent_initialized` and `guardrails_reachable` as true. A successful synthetic balance lookup checks a second trip through the proxy after the tool returns its result. If plain banking chat succeeds but the lookup fails, inspect the main model's support for OpenAI tool calls and ensure `passthrough: true` is present.
+
+The workshop builds NeMo Guardrails 0.24.1 in its own project Deployment. The source fork also contains a TrustyAI-managed deployment. The included path runs on OpenShift with or without OpenShift AI.
+
+Continue to xref:module-2.adoc[apply the banking rules].

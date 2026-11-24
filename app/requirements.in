@@ -1,0 +1,9 @@
+fastapi>=0.135.1,<1
+uvicorn>=0.41,<1
+langchain>=1.2.10,<2
+langchain-openai>=1.1.10,<2
+langgraph-prebuilt>=1.0.8,<2
+httpx>=0.27,<1
+openai>=2.24,<3
+python-dotenv>=1.2.2,<2
+requests>=2.32,<3
