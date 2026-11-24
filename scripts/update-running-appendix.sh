@@ -24,10 +24,31 @@ def replace(path, data, mode):
         tmp.unlink(missing_ok=True)
 entry=root/"scripts/lab.py"
 code=entry.read_text()
+original_code=code
 before="from catalog_cli import run"
 after="from appendix import run"
 if after not in code and code.count(before)!=1:
     sys.exit("Use a participant workspace from the category-picker edition of this workshop.")
+lines=code.splitlines()
+found=set()
+for i,line in enumerate(lines):
+    if not line.strip().startswith("by_name["):
+        continue
+    if "BASE_URL" in line:
+        key="BASE_URL"
+        lines[i]="        by_name[\"BASE_URL\"] = {\"name\": \"BASE_URL\", \"value\": \"http://grlab-rails/v1\", \"valueFrom\": None}"
+    elif "API_KEY" in line:
+        key="API_KEY"
+        lines[i]="        by_name[\"API_KEY\"] = {\"name\": \"API_KEY\", \"value\": \"workshop-local\", \"valueFrom\": None}"
+    elif "GRLAB_BACKEND_MODE" in line:
+        key="GRLAB_BACKEND_MODE"
+        lines[i]="        by_name[\"GRLAB_BACKEND_MODE\"] = {\"name\": \"GRLAB_BACKEND_MODE\", \"value\": \"proxy\", \"valueFrom\": None}"
+    else:
+        continue
+    found.add(key)
+if found != {"BASE_URL","API_KEY","GRLAB_BACKEND_MODE"}:
+    sys.exit("The Terminal grlab CLI does not match the supported module-2 environment update.")
+code="\n".join(lines)+"\n"
 for name in ("catalog_cli.py","rulebook.py","rule_sample.py","policy.py"):
     if not (entry.parent/name).is_file():
         sys.exit("Missing participant file "+name)
@@ -37,7 +58,7 @@ target=entry.parent/"appendix.py"
 new_code=code if after in code else code.replace(before,after,1)
 ast.parse(new_code)
 replace(target,source,0o644)
-if code!=new_code:
+if original_code!=new_code:
     replace(entry,new_code.encode(),stat.S_IMODE(entry.stat().st_mode))
 print("Updated the current Terminal. Rule selection and running workloads were preserved.")
 ' < "$root/scripts/appendix.py"

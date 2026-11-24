@@ -107,9 +107,11 @@ def agent(mode, image):
     dep["spec"]["template"]["metadata"]["annotations"] = {"showroom.rhpds.io/provider-revision": provider_revision}
     if mode == "proxy":
         by_name = {e["name"]: e for e in container["env"]}
-        by_name["BASE_URL"] = {"name": "BASE_URL", "value": "http://grlab-rails/v1"}
-        by_name["API_KEY"] = {"name": "API_KEY", "value": "workshop-local"}
-        by_name["GRLAB_BACKEND_MODE"]["value"] = "proxy"
+        # Explicit nulls clear fields left by the direct-mode EnvVar.valueFrom
+        # references when `oc apply` merges entries by name.
+        by_name["BASE_URL"] = {"name": "BASE_URL", "value": "http://grlab-rails/v1", "valueFrom": None}
+        by_name["API_KEY"] = {"name": "API_KEY", "value": "workshop-local", "valueFrom": None}
+        by_name["GRLAB_BACKEND_MODE"] = {"name": "GRLAB_BACKEND_MODE", "value": "proxy", "valueFrom": None}
         del by_name["MAAS_SUBSCRIPTION"]
         container["env"] = list(by_name.values())
     apply(dep)
