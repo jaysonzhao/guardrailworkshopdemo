@@ -39,7 +39,7 @@ The portal image build downloads the checksum-verified ttyd 1.7.7 release from G
 1. Open the printed Route at its root and sign in through the cluster's identity provider. Approve the workshop OAuth client on first use. An existing browser login can be reused depending on the cluster's identity-provider policy.
 2. The **Terminal** tab starts Bash in `/workspace/lab` with an executable `oc`, `grlab` and editable participant sources. Run `oc whoami`, `oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}'` and `grlab --help`. Confirm the username and project. The guide's **Run in terminal** buttons execute the marked examples in this same shell. Tab changes keep the shell open. Reloading the portal opens a new shell. Copy any edits you need to keep before replacing the Showroom pod.
 3. Open **OCP Console** and compare the signed-in user in its menu. A console that allows this Showroom origin can be displayed in the workspace with `SHOWROOM_CONSOLE_EMBED_URL`. **Open console in a browser tab** remains available for identity-provider redirects and browsers with restrictive frame settings.
-4. After Pre-1, **Banking playground** above the guide opens the banking application through the signed-in Route. The terminal can also call `http://grlab-agent:8080` directly.
+4. After Pre-1, **Banking playground** above the guide opens the banking application through the signed-in Route. The terminal can also call `http://grlab-agent:8080` directly. CLI acceptance checks run from the terminal against in-project Services and do not require `pods/exec` access.
 
 ### Identity and workspace boundaries
 

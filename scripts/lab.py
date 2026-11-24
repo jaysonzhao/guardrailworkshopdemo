@@ -138,8 +138,16 @@ def active():
 
 
 def verify(stage):
-    script = (ROOT / "scripts/verify.py").read_text()
-    oc("exec", "-i", "deployment/grlab-agent", "--", "python", "-", stage, data=script, capture=False)
+    # Run the checks from the participant terminal over the in-project
+    # Services. The participant role may not use pods/exec under the cluster's
+    # SCC policy, even when it can create and roll out the Deployment.
+    provider = get("configmap", "grlab-provider")["data"]
+    command = [sys.executable, str(ROOT / "scripts/verify.py"), stage,
+               "--agent", "http://grlab-agent:8080",
+               "--proxy", "http://grlab-rails/v1"]
+    if provider.get("model"):
+        command.extend(["--model", provider["model"]])
+    subprocess.run(command, check=True)
 
 
 def mount_profile(stage, image, settings):
@@ -183,11 +191,14 @@ def model():
         apply(doc)
     name = deployment["metadata"]["name"]
     rollout(name, "60m")
-    script = (ROOT / "scripts/probe_model.py").read_text()
     prompt = yaml.safe_load((ROOT / "policies/prompts.yml").read_text())["prompts"][0]["content"]
-    # Supply the same rendered input prompt used by NeMo, over stdin together with the probe.
-    code = "PROMPT = " + repr(prompt.replace("{{ user_input }}", "How do I reset my bank password?")) + "\n" + script
-    oc("exec", "-i", "deployment/" + name, "-c", "vllm", "--", "python", "-", data=code, capture=False)
+    # The Showroom terminal probes the model's ClusterIP Service directly;
+    # participant tokens do not need pods/exec access.
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/probe_model.py"),
+         "--base-url", "http://nemotron-safety-guard-vllm:8000/v1"],
+        input=prompt.replace("{{ user_input }}", "How do I reset my bank password?"),
+        text=True, check=True)
 
 
 def activate(stage):

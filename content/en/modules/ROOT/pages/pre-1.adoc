@@ -56,7 +56,7 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent
 
 == Check the baseline
 
-The last command run by the installer calls the agent over HTTP. Look for `PASS credential-free reset request answered` and `PASS balance tool returned the fixture amount`. The agent's health JSON reports `guardrails_reachable: false` in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.
+The CLI runs its acceptance checks from the hosted Terminal against the in-project Service; the participant does not need `pods/exec` access. Look for `PASS credential-free reset request answered` and `PASS balance tool returned the fixture amount`. The agent's health JSON reports `guardrails_reachable: false` in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.
 
 Click *Banking playground* above the hosted guide. Ask “What is the checking balance for my demo account ACCT-12345?” Expect $2,450.00. Both the playground and its chat API use the authenticated Showroom Route. A failure on this query points to the provider's tool-calling support or model selection.
 

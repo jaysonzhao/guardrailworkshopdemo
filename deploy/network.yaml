@@ -16,5 +16,7 @@ spec:
   podSelector: {matchLabels: {app: grlab-rails}}
   policyTypes: [Ingress]
   ingress:
-    - from: [{podSelector: {matchLabels: {app: grlab-agent}}}]
+    - from:
+        - {podSelector: {matchLabels: {app: grlab-agent}}}
+        - {podSelector: {matchLabels: {app: grlab-showroom}}}
       ports: [{port: 8000, protocol: TCP}]

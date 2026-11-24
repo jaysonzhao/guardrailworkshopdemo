@@ -15,7 +15,7 @@ Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check participant
 
 ~~~bash
 oc -n "$LAB_NAMESPACE" auth can-i create deployments.apps
-oc -n "$LAB_NAMESPACE" auth can-i create pods --subresource=exec
+oc -n "$LAB_NAMESPACE" auth can-i get imagestreamtags.image.openshift.io
 oc -n "$LAB_NAMESPACE" auth can-i create networkpolicies.networking.k8s.io
 oc -n "$LAB_NAMESPACE" auth can-i create routes.route.openshift.io
 python3 -m venv .venv
@@ -67,7 +67,7 @@ oc -n "$LAB_NAMESPACE" get deploy grlab-rails --ignore-not-found \
 
 Execute the outstanding stages in order. Use the printed tests as completion gates.
 
-1. Run `./grlab pre-1`. The command uses the instructor-prebuilt `grlab-agent:latest` image digest and deploys it without creating a BuildConfig. The bank app connects directly to the main model. Require a helpful password-reset reply and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
+1. Run `./grlab pre-1`. The command uses the instructor-prebuilt `grlab-agent:latest` image digest and deploys it without creating a BuildConfig. It runs its HTTP checks from the hosted Terminal against the in-project Service, so the participant does not need `pods/exec` access. The bank app connects directly to the main model. Require a helpful password-reset reply and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
 2. Run `./grlab nemo`. The command uses the instructor-prebuilt `grlab-rails:latest` image, publishes the empty `bootstrap` NeMo profile, sets the app's `BASE_URL=http://grlab-rails/v1`, waits for readiness, and repeats the tool lookup through NeMo. Preserve an existing guarded deployment on retries.
 3. Run `./grlab rules` to activate the local banking input, regex and output checks. For settings changes, edit `policies/rules.yaml`, `policies/banking.co` or `policies/actions.py` first, then rerun the stage. Confirm only the main model appears in the mounted `config.yaml`. A basic lab needs neither GPU capacity nor a classifier credential.
 4. Run `./grlab test --expect rules` for rules-only signoff or use `--expect content` after the optional module. It verifies both allowed and blocked application requests, synthetic tool output, the human-handoff disclosure and the browser's streaming response.

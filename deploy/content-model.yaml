@@ -220,5 +220,7 @@ spec:
   podSelector: {matchLabels: {app.kubernetes.io/name: nemotron-safety-guard-vllm}}
   policyTypes: [Ingress]
   ingress:
-    - from: [{podSelector: {matchLabels: {app: grlab-rails}}}]
+    - from:
+        - {podSelector: {matchLabels: {app: grlab-rails}}}
+        - {podSelector: {matchLabels: {app: grlab-showroom}}}
       ports: [{port: 8000, protocol: TCP}]
