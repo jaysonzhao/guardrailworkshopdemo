@@ -8,7 +8,7 @@ Open `showroom/www/modules/en/index.html` from the extracted ZIP. For a local HT
 
 ## Deploy the signed-in Showroom
 
-Use an OpenShift 4.x cluster with integrated OAuth, a reachable web console, a router, service certificates, binary Docker builds and the internal registry. Use a separate project for each participant. The instructor needs project administration rights. The participant needs the built-in project `edit` role or equivalent rights for the exercises. A normal cluster account can deploy a personal Showroom into a project they administer.
+Use an OpenShift 4.x cluster with integrated OAuth, a reachable web console, a router, service certificates and the internal registry. Use a separate project for each participant. The instructor needs project administration rights and an identity allowed to use binary Docker builds. The participant needs the built-in project `edit` role or equivalent rights for the exercises. During Showroom provisioning, the instructor builds the trusted portal, banking-agent and NeMo images, then the installer removes their BuildConfig objects. Participant commands deploy those prebuilt images and do not need BuildConfig strategy permissions.
 
 From the **full repository** on the instructor's workstation, run the following after selecting the assigned project. It preserves the selected project and defaults the participant to the current `oc whoami`. When provisioning for someone else, set `SHOWROOM_USER` to the exact username shown by their `oc whoami` before publishing, and ensure that user has the project's `edit` binding. A project administrator can grant the workshop role with `oc adm policy add-role-to-user edit "$SHOWROOM_USER" -n "$LAB_NAMESPACE"` when needed.
 
@@ -32,7 +32,7 @@ The installer selects the `cli` and `oauth-proxy` images from the cluster's curr
 | `SHOWROOM_CLI_IMAGE`, `SHOWROOM_OAUTH_IMAGE` | Set both to accessible, matching OpenShift release component pullspecs when the installer cannot inspect the release. `RELEASE_REGISTRY_CONFIG` can supply the release-lookup registry credentials file. |
 | `SHOWROOM_ROUTE_CA` | PEM CA bundle on the instructor workstation for a private ingress CA. Supply the same CA trust to participants' browsers. |
 
-The portal image build downloads the checksum-verified ttyd 1.7.7 release from GitHub and pinned Python packages from PyPI. The CLI is staged from the cluster's CLI image. UBI and both release component images must be pullable by the build and participant project.
+The portal image build downloads the checksum-verified ttyd 1.7.7 release from GitHub and pinned Python packages from PyPI. The app and NeMo images also install pinned Python packages; the NeMo build installs compiler packages from UBI RPM repositories. The CLI is staged from the cluster's CLI image. UBI and both release component images must be pullable by the build and participant project.
 
 ### Use the tabs
 

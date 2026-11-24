@@ -94,7 +94,7 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at <code>/</code> and accepts OpenAI-style messages at <code>POST /chat/completions</code>. Its LangGraph tool returns fixed balances for workshop account aliases.</p>
+<p>Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at <code>/</code> and accepts OpenAI-style messages at <code>POST /chat/completions</code>. Its LangGraph tool returns fixed balances for workshop account aliases. The instructor prebuilds the app image during Showroom provisioning. The participant command deploys that image by digest and does not create a BuildConfig.</p>
 </div>
 </div>
 </div>
@@ -108,7 +108,7 @@
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc whoami
 oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
-oc auth can-i create buildconfigs.build.openshift.io -n "$LAB_NAMESPACE"
+oc auth can-i get imagestreamtags.image.openshift.io -n "$LAB_NAMESPACE"
 oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"</code></pre>
 </div>
 </div>
@@ -138,6 +138,9 @@ unset grlab_key</code></pre>
 </div>
 <div class="paragraph">
 <p>Deploy the baseline after setting the model values or provisioning the Secret.</p>
+</div>
+<div class="paragraph">
+<p>If the command reports that <code>grlab-agent:latest</code> is missing, ask the instructor to rerun <code>./grlab showroom</code> with the instructor&#8217;s cluster-admin context before retrying Pre-1.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">

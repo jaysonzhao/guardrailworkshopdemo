@@ -111,7 +111,7 @@
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="pre-1.html" class="xref page">Pre-1</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Build the banking app and connect its main model.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deploy the prebuilt banking app and connect its main model.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The playground returns the synthetic checking balance.</p></td>
 </tr>
 <tr>
@@ -142,7 +142,7 @@
 <h2 id="_your_environment"><a class="anchor" href="#_your_environment"></a>Your environment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Each participant signs into a dedicated OpenShift project. The hosted Terminal includes a matching OpenShift CLI, Python, PyYAML, curl and the executable workshop CLI. A local Linux or Dev Spaces terminal is also supported. The project needs OpenShift Builds with Docker strategy, the integrated image registry, Routes, and a network plugin enforcing Kubernetes NetworkPolicy. Binary builds need access to the Red Hat UBI images, UBI RPM repositories for the proxy build, and the Python package index. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model&#8217;s serving ID, its base URL ending in <code>/v1</code>, its credential, and the MaaS subscription name if required.</p>
+<p>Each participant signs into a dedicated OpenShift project. The hosted Terminal includes a matching OpenShift CLI, Python, PyYAML, curl and the executable workshop CLI. A local Linux or Dev Spaces terminal is also supported. During provisioning, the instructor builds the trusted Showroom, agent and NeMo images with an identity allowed to use binary Docker builds. The build needs the internal image registry, Red Hat UBI images, UBI RPM repositories for the proxy, and the Python package index. BuildConfig objects are removed after each build attempt. Participants need project edit access to deploy the prebuilt images; they do not need permission to create BuildConfigs or select a build strategy. The project also needs Routes and a network plugin enforcing Kubernetes NetworkPolicy. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model&#8217;s serving ID, its base URL ending in <code>/v1</code>, its credential, and the MaaS subscription name if required.</p>
 </div>
 <div class="paragraph">
 <p>Pre-1 through Module 2 and Module 4 can use a remote MaaS model and need no GPU in your lab project. Only Module 3 provisions model weights. It requires one available BF16-capable NVIDIA GPU with enough free memory for the 8B model, a working GPU device plugin, a 30 GiB RWO PVC, access to the serving image and weights, or a prepopulated cache.</p>

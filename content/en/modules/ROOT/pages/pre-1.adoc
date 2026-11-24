@@ -1,6 +1,6 @@
 = Pre-1 · Deploy the banking application
 
-Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at `/` and accepts OpenAI-style messages at `POST /chat/completions`. Its LangGraph tool returns fixed balances for workshop account aliases.
+Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at `/` and accepts OpenAI-style messages at `POST /chat/completions`. Its LangGraph tool returns fixed balances for workshop account aliases. The instructor prebuilds the app image during Showroom provisioning. The participant command deploys that image by digest and does not create a BuildConfig.
 
 == Select the project and model
 
@@ -10,7 +10,7 @@ The hosted Terminal already sets `LAB_NAMESPACE`. In an independently authentica
 ----
 oc whoami
 oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
-oc auth can-i create buildconfigs.build.openshift.io -n "$LAB_NAMESPACE"
+oc auth can-i get imagestreamtags.image.openshift.io -n "$LAB_NAMESPACE"
 oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"
 ----
 
@@ -37,6 +37,8 @@ unset grlab_key
 ----
 
 Deploy the baseline after setting the model values or provisioning the Secret.
+
+If the command reports that `grlab-agent:latest` is missing, ask the instructor to rerun `./grlab showroom` with the instructor's cluster-admin context before retrying Pre-1.
 
 [source,bash,role="execute"]
 ----

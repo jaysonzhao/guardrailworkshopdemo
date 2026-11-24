@@ -121,6 +121,11 @@ def deploy(lab):
     components = images(lab.oc)
     claim_owner(lab, owner, assignment)
     image = lab.build("grlab-showroom", "showroom")
+    # The authenticated participant account may be restricted from choosing a
+    # BuildConfig strategy. Prebuild the trusted runtimes as the instructor,
+    # then let participant commands deploy only the resulting image digests.
+    lab.build("grlab-agent", "app")
+    lab.build("grlab-rails", "proxy")
     docs = {d["kind"]: d for d in lab.manifests("showroom.yaml")}
     for kind in ("NetworkPolicy", "ServiceAccount", "Secret", "Service", "Route"):
         lab.apply(docs[kind])

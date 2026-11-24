@@ -11,11 +11,9 @@ Use this skill with the supplied `guardrail-agent-showroom.zip` or its extracted
 
 Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise.
 
-Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check the permissions and build APIs needed for the selected steps.
+Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check participant deployment permissions separately from the instructor's image-build permissions.
 
 ~~~bash
-oc -n "$LAB_NAMESPACE" auth can-i create buildconfigs.build.openshift.io
-oc -n "$LAB_NAMESPACE" auth can-i create buildconfigs.build.openshift.io --subresource=instantiatebinary
 oc -n "$LAB_NAMESPACE" auth can-i create deployments.apps
 oc -n "$LAB_NAMESPACE" auth can-i create pods --subresource=exec
 oc -n "$LAB_NAMESPACE" auth can-i create networkpolicies.networking.k8s.io
@@ -25,15 +23,15 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 ~~~
 
-Use the supplied manifests and scripts. The guide, app and NeMo use separate OpenShift binary Docker builds and the internal registry. The app and proxy builds need package-index and Red Hat UBI registry access. The NeMo build also installs compiler packages from UBI RPM repositories. Verify ImageStream and tag access, build/log access, ConfigMap and Service access, and pod port-forward privileges for the playground. The primary path uses a namespaced NeMo 0.24.1 Deployment with HTTP tool passthrough. It runs independently of an OpenShift AI operator. Use synthetic banking data for prompts and logs.
+Use the supplied manifests and scripts. During instructor provisioning, the installer uses binary Docker builds for the guide, app and NeMo images, then removes their BuildConfig objects. This prevents a participant's scoped SSO token from selecting a build strategy or submitting arbitrary binary build input. The installer identity must be allowed to use Docker builds. The builds need package-index and Red Hat UBI registry access; the NeMo build also installs compiler packages from UBI RPM repositories. Participants need ImageStreamTag read access plus ConfigMap, Secret, Deployment, Service and NetworkPolicy access, but no BuildConfig strategy permission. The primary path uses a namespaced NeMo 0.24.1 Deployment with HTTP tool passthrough. It runs independently of an OpenShift AI operator. Use synthetic banking data for prompts and logs.
 
 ## Publish the authenticated Showroom
 
-Run this step on the instructor workstation from the full repository. The existing project must permit ServiceAccounts, Secrets, ConfigMaps, service serving certificates, Builds, Deployments, NetworkPolicies and Routes. Verify the participant has project edit rights. When provisioning includes the role grant, use `oc adm policy add-role-to-user edit "$SHOWROOM_USER" -n "$LAB_NAMESPACE"`. Use the current human `oc whoami` by default. When provisioning on behalf of another person, export `SHOWROOM_USER` with the exact username of the intended account. If the deployer is a service account, supply the human username explicitly. The CLI records the first owner in an immutable project ConfigMap and preserves that assignment on retries. Use a separate project for that person.
+Run this step on the instructor workstation from the full repository. The installer identity needs permission to create and run binary Docker builds, in addition to the ServiceAccounts, Secrets, ConfigMaps, service serving certificates, Builds, Deployments, NetworkPolicies and Routes used by the Showroom. Verify the participant has project edit rights. When provisioning includes the role grant, use `oc adm policy add-role-to-user edit "$SHOWROOM_USER" -n "$LAB_NAMESPACE"`. Use the current human `oc whoami` by default. When provisioning on behalf of another person, export `SHOWROOM_USER` with the exact username of the intended account. If the deployer is a service account, supply the human username explicitly. The CLI records the first owner in an immutable project ConfigMap and preserves that assignment on retries. Use a separate project for that person.
 
 Discover the actual console with `oc whoami --show-console`. Supply `SHOWROOM_CONSOLE_URL` if discovery is unavailable. Set `SHOWROOM_CONSOLE_EMBED_URL` only when the platform owner supplies an HTTPS console endpoint that allows this Showroom origin. With the normal console URL the Console tab opens a new browser tab. The portal does not change the cluster's framing configuration.
 
-Check that the presenter can resolve the current release components `cli` and `oauth-proxy`. Supply `RELEASE_REGISTRY_CONFIG` for an authenticated release lookup, or provide both `SHOWROOM_CLI_IMAGE` and `SHOWROOM_OAUTH_IMAGE` as accessible pullspecs from that release. The portal build needs GitHub's ttyd 1.7.7 release, PyPI and the UBI base image. Set `SHOWROOM_ROUTE_CA` to a trusted PEM CA file if the Route uses a private CA.
+Check that the presenter can resolve the current release components `cli` and `oauth-proxy`. Supply `RELEASE_REGISTRY_CONFIG` for an authenticated release lookup, or provide both `SHOWROOM_CLI_IMAGE` and `SHOWROOM_OAUTH_IMAGE` as accessible pullspecs from that release. The portal build needs GitHub's ttyd 1.7.7 release, PyPI and the UBI base image. The installer also builds the agent and NeMo runtime images before publishing the Route. Set `SHOWROOM_ROUTE_CA` to a trusted PEM CA file if the Route uses a private CA.
 
 ~~~bash
 test -x ./grlab
@@ -69,8 +67,8 @@ oc -n "$LAB_NAMESPACE" get deploy grlab-rails --ignore-not-found \
 
 Execute the outstanding stages in order. Use the printed tests as completion gates.
 
-1. Run `./grlab pre-1`. The bank app connects directly to the main model. Require a helpful password-reset reply and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
-2. Run `./grlab nemo`. The script publishes the empty `bootstrap` NeMo profile, sets the app's `BASE_URL=http://grlab-rails/v1`, waits for readiness, and repeats the tool lookup through NeMo. Preserve an existing guarded deployment on retries.
+1. Run `./grlab pre-1`. The command uses the instructor-prebuilt `grlab-agent:latest` image digest and deploys it without creating a BuildConfig. The bank app connects directly to the main model. Require a helpful password-reset reply and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
+2. Run `./grlab nemo`. The command uses the instructor-prebuilt `grlab-rails:latest` image, publishes the empty `bootstrap` NeMo profile, sets the app's `BASE_URL=http://grlab-rails/v1`, waits for readiness, and repeats the tool lookup through NeMo. Preserve an existing guarded deployment on retries.
 3. Run `./grlab rules` to activate the local banking input, regex and output checks. For settings changes, edit `policies/rules.yaml`, `policies/banking.co` or `policies/actions.py` first, then rerun the stage. Confirm only the main model appears in the mounted `config.yaml`. A basic lab needs neither GPU capacity nor a classifier credential.
 4. Run `./grlab test --expect rules` for rules-only signoff or use `--expect content` after the optional module. It verifies both allowed and blocked application requests, synthetic tool output, the human-handoff disclosure and the browser's streaming response.
 

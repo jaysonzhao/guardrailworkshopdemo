@@ -54,10 +54,24 @@ def build(name, directory):
         "strategy": {"type": "Docker", "dockerStrategy": {}},
         "output": {"to": {"kind": "ImageStreamTag", "name": name + ":latest"}},
         "triggers": []}))
-    oc("start-build", name, "--from-dir=" + str(ROOT / directory), "--follow", "--wait", capture=False)
-    image = oc("get", "istag", name + ":latest", "-o", "jsonpath={.image.dockerImageReference}")
+    try:
+        oc("start-build", name, "--from-dir=" + str(ROOT / directory), "--follow", "--wait", capture=False)
+        image = oc("get", "istag", name + ":latest", "-o", "jsonpath={.image.dockerImageReference}")
+        if "@sha256:" not in image:
+            raise RuntimeError(f"Missing published image digest for {name}")
+        return image
+    finally:
+        # Only the instructor provisions binary Docker builds. Remove their
+        # definitions after completion so participant tokens cannot start a
+        # new build with untrusted binary input.
+        oc("delete", "buildconfig", name, "--ignore-not-found", capture=False)
+
+
+def built_image(name):
+    image = oc("get", "istag", name + ":latest", "--ignore-not-found", "-o",
+               "jsonpath={.image.dockerImageReference}")
     if "@sha256:" not in image:
-        raise RuntimeError(f"Missing published image digest for {name}")
+        raise RuntimeError(f"The instructor has not prebuilt {name}:latest. Run ./grlab showroom with the instructor's build-enabled context first.")
     return image
 
 
@@ -110,10 +124,11 @@ def pre():
         old = existing["spec"]["template"]["spec"]["containers"][0]
         if any(e.get("name") == "GRLAB_BACKEND_MODE" and e.get("value") == "proxy" for e in old["env"]):
             raise RuntimeError("The agent already uses NeMo. Continue with rules, content or test in this project.")
+    image = built_image("grlab-agent")
     configure_provider()
     for obj in manifests("network.yaml"):
         apply(obj)
-    agent("direct", build("grlab-agent", "app"))
+    agent("direct", image)
     verify("direct")
 
 
@@ -192,7 +207,7 @@ def activate(stage):
     if stage == "content":
         model()  # Keep the current policy serving during download, load and inference checks.
     cfg = get("configmap", "grlab-provider")["data"]
-    image = proxy["spec"]["template"]["spec"]["containers"][0]["image"] if proxy else build("grlab-rails", "proxy")
+    image = proxy["spec"]["template"]["spec"]["containers"][0]["image"] if proxy else built_image("grlab-rails")
     previous = None
     if proxy:
         previous = {k: proxy[k] for k in ("apiVersion", "kind", "spec")}
