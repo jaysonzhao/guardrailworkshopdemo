@@ -1,7 +1,18 @@
-/* Keep the workshop's executable listings discoverable by mouse, keyboard and touch. */
-.doc .listingblock.execute .source-toolbox,
-.doc .listingblock:focus-within .source-toolbox { visibility: visible; }
-.doc .listingblock.execute pre.highlight { padding-top: 2.1rem; }
-.doc .source-toolbox .paste-button { width: auto; min-width: 3.2rem; gap: .3rem; }
-.doc .source-toolbox .paste-button::after { content: "Run"; font-size: .8rem; }
-.doc .source-toolbox .paste-icon { width: 1rem; height: 1rem; }
+.doc .listingblock.execute .source-toolbox,.doc .listingblock:focus-within .source-toolbox{visibility:visible}
+.doc .listingblock.execute pre.highlight{padding-top:2.1rem}
+.doc .source-toolbox .paste-button{width:auto;min-width:3.2rem;gap:.3rem}
+.doc .source-toolbox .paste-button::after{content:"Run";font-size:.8rem}
+.doc .source-toolbox .paste-icon{width:1rem;height:1rem}
+#rule-browser [hidden]{display:none!important}
+#rule-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:.65rem;padding:.85rem;background:#f1f4f6;border-radius:.25rem}
+#rule-filters label{display:flex;flex-direction:column;font-weight:600;font-size:.95em}
+#rule-filters select,#rule-filters button{max-width:100%;font:inherit;padding:.35rem;border:1px solid #637083;border-radius:.2rem;background:white;color:#192332}
+#rule-count,.rule-meta{color:#475568;font-size:.9em}
+.rule-card{border-top:1px solid #d3d7d9;padding:.5rem .2rem}
+.rule-card summary{cursor:pointer;font-weight:600;line-height:1.7}
+.rule-card summary code{margin-left:.4rem;font-size:.8em}
+.rule-card dl{margin:.7rem 0}
+.rule-card dt{font-weight:600}.rule-card dd{margin:0 0 .5rem .6rem}
+.rule-command>span{font-weight:600;font-size:.85em}
+.rule-command .listingblock{margin:.25rem 0 .7rem}
+@media(max-width:600px){#rule-filters label{width:100%}}

@@ -2,20 +2,20 @@
 
 Place a working proxy in the model path while keeping the app's banking behavior observable. This stage uses an empty set of policy flows. The app sends tool-capable, non-streaming model requests to NeMo. The browser can still receive streamed events from the agent.
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
 ./grlab nemo
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent deploy/grlab-rails svc/grlab-rails
-oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- printenv BASE_URL
-oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
- 'from urllib.request import urlopen; print(urlopen("http://grlab-rails/v1/rails/configs").read().decode())'
+oc -n "$LAB_NAMESPACE" get deploy/grlab-agent \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="BASE_URL")].value}{"\n"}'
+python3 -c 'from urllib.request import urlopen; print(urlopen("http://grlab-rails/v1/rails/configs").read().decode())'
 ----
 
 Expect the app's `BASE_URL` to be `http://grlab-rails/v1` and the proxy to list a configuration with ID `bootstrap`. The proxy receives the main provider credential from the Secret. It forwards permitted requests to the same main model as Pre-1 with the configured MaaS subscription header, when used.
 
 == Verify the cutover
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
 ./grlab test
 ----

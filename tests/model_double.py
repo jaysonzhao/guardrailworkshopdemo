@@ -35,10 +35,15 @@ class Fixture(BaseHTTPRequestHandler):
             # Match the conversation portion only. Policy descriptions name unsafe cases.
             self.server.calls.append("classifier")
             verdict = {"User Safety": "safe"}
-            if "humiliating" in content.lower():
+            policy, _, exchange = content.partition("<BEGIN CONVERSATION>")
+            if "S10:" in policy and "humiliating" in exchange.lower():
                 verdict = {"User Safety": "unsafe", "Safety Categories": "Harassment"}
-            if "response: agent:" in content.lower():
-                verdict["Response Safety"] = "unsafe" if "CLASSIFIER_OUTPUT_FIXTURE" in content else "safe"
+            if "S16:" in policy and "false endorsement" in exchange.lower():
+                verdict = {"User Safety": "unsafe", "Safety Categories":"Fraud/Deception"}
+            if "response: agent:" in exchange.lower():
+                verdict["Response Safety"] = "unsafe" if "CLASSIFIER_OUTPUT_FIXTURE" in exchange else "safe"
+                if verdict["Response Safety"] == "unsafe":
+                    verdict["Safety Categories"] = "Harassment"
             out["content"] = "non-verdict" if "malformed verdict rehearsal" in content.lower() else json.dumps(verdict)
         else:
             self.server.calls.append("main")
@@ -50,6 +55,8 @@ class Fixture(BaseHTTPRequestHandler):
                     "name": "check_balance", "arguments": json.dumps({"account_id": "ACCT-12345"})}}])
             elif "output canary exercise" in phrase:
                 out["content"] = "B_ONLY_CANARY_7Q2"
+            elif "collections draft rehearsal" in phrase:
+                out["content"] = "You should be ashamed of your late payment."
             elif "classifier output rehearsal" in phrase:
                 out["content"] = "CLASSIFIER_OUTPUT_FIXTURE"
             else:

@@ -1,4 +1,4 @@
-"""Install the checksummed, static upstream ttyd binary for this image architecture."""
+"""Install the checksummed upstream ttyd binary."""
 import hashlib
 import platform
 from pathlib import Path

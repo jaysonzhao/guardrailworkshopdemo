@@ -4,3 +4,5 @@
 * xref:module-2.adoc[2 · Configure banking rules]
 * xref:module-3.adoc[3 · Add content safety (optional)]
 * xref:module-4.adoc[4 · Test the application]
+* xref:module-5.adoc[5 · Remove NeMo and use the model directly (optional)]
+* xref:appendix-rules.adoc[Appendix · Choose and try a rule]

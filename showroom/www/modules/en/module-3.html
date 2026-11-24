@@ -9,6 +9,7 @@
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -55,6 +56,12 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
   </li>
 </ul>
   </li>
@@ -103,15 +110,8 @@
 <div class="sectionbody">
 <div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" get resourcequota</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Node and storage-class inventories are cluster-scoped. Ask the platform operator to run the following checks from their own cluster session.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get storageclass
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" get resourcequota
+oc get storageclass
 oc get nodes -L nvidia.com/gpu.product \
   -o 'custom-columns=NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product'</code></pre>
 </div>
@@ -127,7 +127,7 @@ oc get nodes -L nvidia.com/gpu.product \
 <div class="sect1">
 <h2 id="_deploy_probe_and_activate"><a class="anchor" href="#_deploy_probe_and_activate"></a>Deploy, probe and activate</h2>
 <div class="sectionbody">
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat policies/content.yaml
 ./grlab content
@@ -145,7 +145,7 @@ oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety
 <div class="sect1">
 <h2 id="_return_to_the_rules_only_workshop"><a class="anchor" href="#_return_to_the_rules_only_workshop"></a>Return to the rules-only workshop</h2>
 <div class="sectionbody">
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab rules
 ./grlab test</code></pre>
@@ -154,13 +154,16 @@ oc -n "$LAB_NAMESPACE" get deploy/nemotron-safety-guard-vllm svc/nemotron-safety
 <div class="paragraph">
 <p>This returns traffic to local checks. To release the GPU while preserving the downloaded weights, scale the model to zero after the rules-only test passes.</p>
 </div>
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" scale deploy/nemotron-safety-guard-vllm --replicas=0</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>Running the content step again restores the replica and reuses the PVC. To finish with the classifier enabled, keep the <code>content</code> profile active and go to <a href="module-4.html" class="xref page">Module 4</a>.</p>
+</div>
+<div class="paragraph">
+<p>The default policy covers categories S1 through S13. The <a href="appendix-rules.html" class="xref page">rule appendix</a> includes all 23 categories documented for the v3 model and lets you enable either classifier direction.</p>
 </div>
 </div>
 </div>

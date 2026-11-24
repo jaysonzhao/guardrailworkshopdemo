@@ -1,0 +1,63 @@
+[cols="2,1,5",options="header"]
+|===
+|NeMo rail |Direction |Flow names
+|ActiveFence |input |`activefence moderation on input`, `activefence moderation on input detailed`
+|  |output |`activefence moderation on output`
+|AlignScore Fact Checking |output |`alignscore check facts`
+|AutoAlign |input |`autoalign check input`
+|  |output |`autoalign check output`, `autoalign groundedness output`, `autoalign factcheck output`
+|Cisco AI Defense |input |`ai defense inspect prompt`
+|  |output |`ai defense inspect response`
+|Clavata |input |`clavata check input`
+|  |output |`clavata check output`
+|Cleanlab |output |`cleanlab trustworthiness`
+|Content Safety |input |`content safety check input`
+|  |output |`content safety check output`
+|Context Bloat Detection |input |`context bloat detection on input`
+|  |retrieval |`context bloat detection on retrieval`
+|CrowdStrike AIDR |input |`crowdstrike aidr guard input`
+|  |output |`crowdstrike aidr guard output`
+|F5 AI Guardrails |input |`f5 guardrails scan input`
+|  |output |`f5 guardrails scan output`
+|Fiddler Guardrails |input |`fiddler user safety`
+|  |output |`fiddler bot safety`, `fiddler bot faithfulness`
+|GCP Text Moderation |input |`gcpnlp moderation`, `gcpnlp moderation detailed`
+|GLiNER |input |`gliner detect pii on input`, `gliner mask pii on input`
+|  |output |`gliner detect pii on output`, `gliner mask pii on output`
+|  |retrieval |`gliner detect pii on retrieval`, `gliner mask pii on retrieval`
+|Guardrails AI |input |`guardrailsai check input`
+|  |output |`guardrailsai check output`
+|Hallucination Detection |output |`self check hallucination`
+|Hugging Face Classifier |input |`hf classifier check input`
+|  |output |`hf classifier check output`
+|  |retrieval |`hf classifier check retrieval`
+|Injection Detection |output |`injection detection`
+|Jailbreak Detection |input |`jailbreak detection heuristics`, `jailbreak detection model`
+|Llama Guard |input |`llama guard check input`
+|  |output |`llama guard check output`
+|Pangea AI Guard |input |`pangea ai guard input`
+|  |output |`pangea ai guard output`
+|Patronus AI |output |`patronus lynx check output hallucination`, `patronus api check output`
+|PolicyAI |input |`policyai moderation on input`
+|  |output |`policyai moderation on output`
+|Polygraf PII Detection |input |`polygraf detect pii on input`, `polygraf mask pii on input`
+|  |output |`polygraf detect pii on output`, `polygraf mask pii on output`
+|  |retrieval |`polygraf detect pii on retrieval`, `polygraf mask pii on retrieval`
+|Private AI |input |`detect pii on input`, `mask pii on input`
+|  |output |`detect pii on output`, `mask pii on output`
+|  |retrieval |`detect pii on retrieval`, `mask pii on retrieval`
+|Prompt Security |input |`protect prompt`
+|  |output |`protect response`
+|Regex Detection |input |`regex check input`
+|  |output |`regex check output`
+|  |retrieval |`regex check retrieval`
+|Self-Check Facts |output |`self check facts`
+|Self-Check Input |input |`self check input`
+|Self-Check Output |output |`self check output`
+|Sensitive Data Detection |input |`detect sensitive data on input`, `mask sensitive data on input`
+|  |output |`detect sensitive data on output`, `mask sensitive data on output`
+|  |retrieval |`detect sensitive data on retrieval`, `mask sensitive data on retrieval`
+|Topic Safety |input |`topic safety check input`
+|Trend Micro Vision One AI Guard |input |`trend ai guard input`
+|  |output |`trend ai guard output`
+|===

@@ -9,6 +9,7 @@
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -56,6 +57,12 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -100,9 +107,9 @@
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab nemo
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent deploy/grlab-rails svc/grlab-rails
-oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- printenv BASE_URL
-oc -n "$LAB_NAMESPACE" exec deploy/grlab-agent -- python -c \
- 'from urllib.request import urlopen; print(urlopen("http://grlab-rails/v1/rails/configs").read().decode())'</code></pre>
+oc -n "$LAB_NAMESPACE" get deploy/grlab-agent \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="BASE_URL")].value}{"\n"}'
+python3 -c 'from urllib.request import urlopen; print(urlopen("http://grlab-rails/v1/rails/configs").read().decode())'</code></pre>
 </div>
 </div>
 <div class="paragraph">

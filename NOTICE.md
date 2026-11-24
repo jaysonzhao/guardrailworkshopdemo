@@ -10,10 +10,4 @@ The LangGraph banking agent, its playground, synthetic account tool, banking act
 
 Workshop adaptations include direct and proxied readiness, synthetic tool authorization, a module-specific scenario picker, portable image builds, separately activated rail layers, named Colang refusal messages, strict Nemotron JSON verdicts, and a portable GPU resource request. The fork's CPU topic classifier and MLflow environment are outside the workshop sequence.
 
-The standalone tab layout uses a local portal and ttyd. The terminal build verifies the upstream binary against the release's published SHA-256 for its architecture. OpenShift supplies its own release-matched OAuth proxy and CLI images. The project-scoped OAuth client and the console framing behavior follow these sources.
-
-- [ttyd 1.7.7 release, checksums and license](https://github.com/tsl0922/ttyd/releases/tag/1.7.7)
-- [OpenShift OAuth proxy](https://github.com/openshift/oauth-proxy/tree/release-4.20)
-- [OpenShift service accounts as OAuth clients and role scopes](https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/observability/authentication_and_authorization/configuring-identity-providers#using-service-accounts-as-oauth-client)
-- [RHDP Showroom tab configuration](https://rhpds.github.io/showroom_template_nookbag/modules/ui-config.html)
-- [RHDP OpenShift console embedding](https://rhpds.github.io/showroom_template_nookbag/modules/ocp-integration.html)
+The appendix indexes names from the [NeMo 0.24.1 flow manifests](https://docs.nvidia.com/nemo/guardrails/v0.24.1/reference/rail-engine-support) and the [Nemotron Safety Guard v3 taxonomy](https://build.nvidia.com/nvidia/llama-3_1-nemotron-safety-guard-8b-v3/modelcard). The authenticated terminal image downloads a checksummed binary from the [ttyd 1.7.7 release](https://github.com/tsl0922/ttyd/releases/tag/1.7.7).

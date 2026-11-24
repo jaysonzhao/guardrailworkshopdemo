@@ -1,19 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Banking agent lab · OpenShift Showroom</title>
-<link rel="stylesheet" href="/portal/portal.css"><script defer src="/portal/portal.js"></script>
-</head>
-<body>
-<header><div class="title">Banking agent lab</div><div class="identity" id="identity" aria-live="polite">Connecting to OpenShift…</div><a class="logout" href="/oauth/sign_out">Sign out</a></header>
-<main>
-<section class="guide" aria-label="Workshop guide"><div class="toolbar"><strong>Workshop guide</strong><a href="/playground/" target="_blank" rel="noopener">Banking playground ↗</a></div>
-<iframe id="guide" title="Workshop guide" src="/modules/en/index.html"></iframe></section>
-<section class="work" aria-label="Workspace">
-<nav aria-label="Workspace tabs"><button id="terminalTab" type="button" aria-controls="terminalPanel" aria-pressed="true">Terminal</button><a id="consoleTab" href="#" target="_blank" rel="noopener" aria-controls="consolePanel">OCP Console</a></nav>
-<div id="terminalPanel" class="panel"><iframe id="terminal" title="OpenShift terminal"></iframe></div>
-<div id="consolePanel" class="panel" hidden><div class="consoleTools"><a id="externalConsole" target="_blank" rel="noopener">Open console in a browser tab ↗</a></div><p id="consoleHint">The console opens in its own tab using your cluster login. Return here to continue the guide.</p><iframe id="console" title="OpenShift web console" hidden></iframe></div>
-</section></main>
-<div id="message" role="status" hidden></div>
-</body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Banking agent lab · OpenShift Showroom</title><link rel="stylesheet" href="/portal/portal.css"><script defer src="/portal/portal.js"></script></head>
+<body><header><strong>Banking agent lab</strong><span id="identity" aria-live="polite">Connecting to OpenShift…</span><a href="/oauth/sign_out">Sign out</a></header>
+<main><section class="guide"><div class="toolbar"><strong>Workshop guide</strong><a href="/playground/" target="_blank" rel="noopener">Banking playground ↗</a></div><iframe id="guide" title="Workshop guide" src="/modules/en/index.html"></iframe></section>
+<section class="work"><nav aria-label="Workspace tabs"><button id="terminalTab" type="button" aria-pressed="true" aria-controls="terminalPanel">Terminal</button><a id="consoleTab" href="#" target="_blank" rel="noopener" aria-controls="consolePanel">OCP Console</a></nav>
+<div class="panel" id="terminalPanel"><iframe id="terminal" title="OpenShift terminal"></iframe></div><div class="panel" id="consolePanel" hidden><div class="toolbar"><a id="externalConsole" target="_blank" rel="noopener">Open console in a browser tab ↗</a></div><p id="consoleHint">The console opens in its own tab using your cluster login. Return here to continue the guide.</p><iframe id="console" title="OpenShift web console" hidden></iframe></div></section></main><div id="message" role="status" hidden></div></body></html>

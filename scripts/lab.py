@@ -61,9 +61,8 @@ def build(name, directory):
             raise RuntimeError(f"Missing published image digest for {name}")
         return image
     finally:
-        # Only the instructor provisions binary Docker builds. Remove their
-        # definitions after completion so participant tokens cannot start a
-        # new build with untrusted binary input.
+        # Only instructor provisioning submits binary builds. Remove the
+        # BuildConfig so the scoped participant identity cannot build images.
         oc("delete", "buildconfig", name, "--ignore-not-found", capture=False)
 
 
@@ -138,20 +137,37 @@ def active():
 
 
 def verify(stage):
-    # Run the checks from the participant terminal over the in-project
-    # Services. The participant role may not use pods/exec under the cluster's
-    # SCC policy, even when it can create and roll out the Deployment.
+    # Run checks from the participant Terminal over in-project HTTP Services.
+    # This avoids requiring pods/exec just to verify the app or model path.
     provider = get("configmap", "grlab-provider")["data"]
     command = [sys.executable, str(ROOT / "scripts/verify.py"), stage,
                "--agent", "http://grlab-agent:8080",
                "--proxy", "http://grlab-rails/v1"]
     if provider.get("model"):
         command.extend(["--model", provider["model"]])
+    if stage in ("rules", "content"):
+        from catalog_cli import current, selected
+        _, mounted = current(sys.modules[__name__], get("deployment", "grlab-rails"))
+        ids = selected(mounted)
+        if ids is not None:
+            command.extend(["--active-json", json.dumps(sorted(ids))])
     subprocess.run(command, check=True)
 
 
 def mount_profile(stage, image, settings):
-    data = render(stage, settings["model"], settings["url"], settings["subscription"])
+    active_ids = None
+    if stage in ("rules", "content"):
+        from catalog_cli import current, selected
+        import rulebook
+        proxy = get("deployment", "grlab-rails")
+        _, mounted = current(sys.modules[__name__], proxy)
+        _, entries = rulebook.catalog()
+        active_ids = rulebook.resolve(entries, rulebook.selection(entries), selected(mounted))
+    data = render(stage, settings["model"], settings["url"], settings.get("subscription", ""), active_ids=active_ids)
+    # Restore the proxy ingress rule when Module 1 is repeated after optional cleanup.
+    for doc in manifests("network.yaml"):
+        if doc["metadata"]["name"] == "grlab-rails-ingress":
+            apply(doc)
     digest = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:12]
     cm_name = f"grlab-{stage}-{digest}"
     apply(resource("v1", "ConfigMap", cm_name, data=data, immutable=True))
@@ -192,8 +208,8 @@ def model():
     name = deployment["metadata"]["name"]
     rollout(name, "60m")
     prompt = yaml.safe_load((ROOT / "policies/prompts.yml").read_text())["prompts"][0]["content"]
-    # The Showroom terminal probes the model's ClusterIP Service directly;
-    # participant tokens do not need pods/exec access.
+    # Probe the model Service from the terminal pod instead of requiring
+    # participant pods/exec access.
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/probe_model.py"),
          "--base-url", "http://nemotron-safety-guard-vllm:8000/v1"],
@@ -235,26 +251,53 @@ def activate(stage):
         raise
 
 
-def main():
-    parser = argparse.ArgumentParser(prog="grlab", description=__doc__)
-    parser.add_argument("step", choices=("showroom", "pre-1", "nemo", "rules", "content", "test"))
-    parser.add_argument("--expect", choices=STAGES, help="require this active profile when running test")
-    args = parser.parse_args()
-    if args.expect and args.step != "test":
-        parser.error("--expect applies only to the test step")
-    if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", NS) or NS in {"default", "kube-system", "openshift"} or NS.startswith(("openshift-", "kube-")):
-        parser.error("Set LAB_NAMESPACE to a dedicated application project.")
+def check_target():
+    if (not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", NS)
+            or NS in {"default", "kube-system", "openshift"} or NS.startswith(("openshift-", "kube-"))):
+        raise ValueError("Set LAB_NAMESPACE to a dedicated application project.")
     oc("whoami")
     oc("get", "configmap/kube-root-ca.crt", "-o", "name")
+
+
+def main():
+    here = sys.modules[__name__]
+    if sys.argv[1:2] == ["catalog"]:
+        from catalog_cli import run
+        run(here, sys.argv[2:])
+        return
+    parser = argparse.ArgumentParser(prog="grlab", description=__doc__)
+    sub = parser.add_subparsers(dest="step", required=True)
+    for name, help_text in (("showroom","deploy the signed-in guide and terminal"),("pre-1","deploy the app in direct mode"),
+                            ("nemo","deploy the NeMo proxy"),("rules","activate deterministic rules"),
+                            ("content","deploy and attach the GPU classifier"),("catalog","browse and customize individual rules")):
+        sub.add_parser(name, help=help_text)
+    test = sub.add_parser("test", help="verify the application and active mode")
+    test.add_argument("--expect", choices=("direct", *STAGES))
+    clean = sub.add_parser("cleanup", help="verify direct model access and remove the NeMo proxy")
+    clean.add_argument("--dry-run", action="store_true", help="show the plan without making changes")
+    clean.add_argument("--remove-model", action="store_true", help="also delete the optional classifier workload and its Service")
+    clean.add_argument("--delete-model-cache", action="store_true", help="also discard cached weights (requires --remove-model)")
+    args = parser.parse_args()
+    if args.step == "cleanup" and args.delete_model_cache and not args.remove_model:
+        clean.error("--delete-model-cache requires --remove-model")
+    check_target()
     if args.step == "showroom":
         from showroom import deploy
-        deploy(sys.modules[__name__])
+        deploy(here)
     elif args.step == "pre-1":
         pre()
+    elif args.step == "cleanup":
+        from cleanup import run
+        run(here, args.dry_run, args.remove_model, args.delete_model_cache)
     elif args.step == "test":
-        stage = active()
-        if stage not in STAGES:
-            raise RuntimeError("No active workshop NeMo profile.")
+        app = get("deployment", "grlab-agent")
+        if not app:
+            raise RuntimeError("Deploy Pre-1 first.")
+        c = next(c for c in app["spec"]["template"]["spec"]["containers"] if c["name"] == "agent")
+        mode = next((e.get("value") for e in c["env"] if e["name"] == "GRLAB_BACKEND_MODE"), None)
+        stage = "direct" if mode == "direct" else active()
+        if stage not in ("direct", *STAGES):
+            raise RuntimeError("The app has no recognized backend. Inspect its deployment and the NeMo Service.")
         if args.expect and stage != args.expect:
             raise RuntimeError(f"Expected {args.expect}, found {stage}")
         verify(stage)
@@ -265,6 +308,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
+    except (RuntimeError, ValueError, OSError, subprocess.CalledProcessError) as exc:
         print("Workshop stopped:", exc, file=sys.stderr)
         sys.exit(1)

@@ -9,6 +9,7 @@
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -56,6 +57,12 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -94,7 +101,7 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at <code>/</code> and accepts OpenAI-style messages at <code>POST /chat/completions</code>. Its LangGraph tool returns fixed balances for workshop account aliases. The instructor prebuilds the app image during Showroom provisioning. The participant command deploys that image by digest and does not create a BuildConfig.</p>
+<p>Establish that the agent, main model, and balance tool work before introducing a proxy. The FastAPI app serves a playground at <code>/</code> and accepts OpenAI-style messages at <code>POST /chat/completions</code>. Its LangGraph tool returns fixed balances for workshop account aliases.</p>
 </div>
 </div>
 </div>
@@ -102,12 +109,12 @@
 <h2 id="_select_the_project_and_model"><a class="anchor" href="#_select_the_project_and_model"></a>Select the project and model</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The hosted Terminal already sets <code>LAB_NAMESPACE</code>. In an independently authenticated laptop or Dev Spaces shell, select your assigned project, then run <code>export LAB_NAMESPACE="$(oc project -q)"</code>. An instructor can create a new project with <code>oc new-project &lt;assigned-project&gt;</code> before publishing the Showroom.</p>
+<p>In the hosted Terminal, the project and OpenShift identity are already set. On a workstation, export <code>LAB_NAMESPACE</code> with the name of your assigned project and log in with <code>oc</code> first. Confirm access.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc whoami
-oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
+echo "$LAB_NAMESPACE"
 oc auth can-i get imagestreamtags.image.openshift.io -n "$LAB_NAMESPACE"
 oc auth can-i create deployments.apps -n "$LAB_NAMESPACE"</code></pre>
 </div>
@@ -133,26 +140,16 @@ export MAIN_API_KEY_FILE="$(mktemp)"
 read -rsp 'Main model API key: ' grlab_key
 printf '\n'
 printf '%s' "$grlab_key" &gt; "$MAIN_API_KEY_FILE"
-unset grlab_key</code></pre>
+unset grlab_key
+./grlab pre-1</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Deploy the baseline after setting the model values or provisioning the Secret.</p>
-</div>
-<div class="paragraph">
-<p>If the command reports that <code>grlab-agent:latest</code> is missing, ask the instructor to rerun <code>./grlab showroom</code> with the instructor&#8217;s cluster-admin context before retrying Pre-1.</p>
-</div>
-<div class="listingblock execute">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab pre-1</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>If you used the hidden prompt, remove the temporary key file after the Secret exists.</p>
+<p>If you used the hidden prompt, remove the temporary key file after the Secret exists. For an existing Secret, skip the key-file commands and run the deployment directly.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">if [[ -n ${MAIN_API_KEY_FILE:-} ]]; then rm -f "$MAIN_API_KEY_FILE"; fi
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">rm -f "$MAIN_API_KEY_FILE"
 unset MAIN_API_KEY_FILE
 oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent</code></pre>
 </div>
@@ -163,18 +160,18 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-agent svc/grlab-agent</code></pre>
 <h2 id="_check_the_baseline"><a class="anchor" href="#_check_the_baseline"></a>Check the baseline</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The CLI runs its acceptance checks from the hosted Terminal against the in-project Service; the participant does not need <code>pods/exec</code> access. Look for <code>PASS credential-free reset request answered</code> and <code>PASS balance tool returned the fixture amount</code>. The agent&#8217;s health JSON reports <code>guardrails_reachable: false</code> in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.</p>
+<p>The last command run by the installer calls the agent over HTTP. Look for <code>PASS credential-free reset request answered</code> and <code>PASS balance tool returned the fixture amount</code>. The agent&#8217;s health JSON reports <code>guardrails_reachable: false</code> in this stage. Readiness in direct mode confirms the graph initialized. The chat and tool tests exercise the remote model.</p>
 </div>
 <div class="paragraph">
-<p>Click <strong>Banking playground</strong> above the hosted guide. Ask “What is the checking balance for my demo account ACCT-12345?” Expect $2,450.00. Both the playground and its chat API use the authenticated Showroom Route. A failure on this query points to the provider&#8217;s tool-calling support or model selection.</p>
-</div>
-<div class="paragraph">
-<p>For a laptop-only session, open a second local terminal with an authenticated <code>oc</code>, set the assigned project, and forward the port. Then open <a href="http://127.0.0.1:18080">the local banking playground</a>. A port forwarded inside the hosted Terminal listens inside its pod. Use the playground link for your browser.</p>
+<p>In the hosted guide select <strong>Banking playground</strong>. If you use a workstation, run the following in a second shell with the same project selected.</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Open <a href="http://127.0.0.1:18080">the local playground</a> when port-forwarding. Ask “What is the checking balance for my demo account ACCT-12345?” Expect <strong>$2,450.00</strong>. Repeat a local port-forward after an agent rollout. Continue to <a href="module-1.html" class="xref page">deploy NeMo</a>.</p>
 </div>
 </div>
 </div>

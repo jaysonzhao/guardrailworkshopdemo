@@ -1,4 +1,4 @@
-# The authenticated playground and the project-local terminal share the Showroom pod.
+# Requests from the authenticated playground and terminal use the Showroom pod.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: {name: grlab-agent-ingress}

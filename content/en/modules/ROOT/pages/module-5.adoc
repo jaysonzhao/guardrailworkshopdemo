@@ -1,0 +1,49 @@
+= Module 5 · Remove NeMo and reconnect the app to its model (optional)
+
+Use this module when you want to keep the banking app and playground running after the guardrails exercise. The path becomes *Banking playground → banking agent → original main model*. The account tool still checks the demo account. NeMo input, output and content-safety decisions end when the app switches to direct mode.
+
+== Preview the resources in your project
+
+Run the preview in the Showroom *Terminal*. Confirm your project and the original served model ID. The provider ConfigMap stores the endpoint and subscription settings. The API key remains in the `grlab-main` Secret.
+
+[source,bash,role=execute]
+----
+oc whoami
+echo "$LAB_NAMESPACE"
+oc -n "$LAB_NAMESPACE" get cm grlab-provider -o 'jsonpath={.data.model}{"\n"}{.data.url}{"\n"}'
+./grlab cleanup --dry-run
+----
+
+The preview lists the workshop proxy Deployment, Service, ingress NetworkPolicy, any leftover BuildConfig and versioned policy ConfigMaps if present. It retains the prebuilt NeMo ImageStream so the guarded path can be restored later. The default retains the Showroom, agent, model connection, credential, optional classifier and weights. A retained classifier replica can continue to reserve its GPU.
+
+== Switch, verify and remove the proxy
+
+Run the next command once you are ready to remove the listed resources.
+
+[source,bash,role=execute]
+----
+./grlab cleanup
+----
+
+The CLI switches the existing agent Deployment to direct mode using the original ConfigMap, Secret and optional MaaS subscription, then waits for rollout. Before deleting the first NeMo resource it requires successful reset guidance, a streamed `check_balance` tool result for ACCT-12345, and an assistant answer containing *$2,450.00*. If that check fails after switching, the CLI restores the previous app connection and leaves the proxy available. After a successful switch, an interrupted deletion can be retried with the same command.
+
+[source,bash,role=execute]
+----
+./grlab test --expect direct
+oc -n "$LAB_NAMESPACE" get deployment/grlab-rails service/grlab-rails --ignore-not-found -o name
+----
+
+Expect direct health and both chat checks to pass, followed by empty output for the removed Deployment and Service. In the *Banking playground*, ask “How do I reset my online banking password?” and “What is the checking balance for my demo account ACCT-12345?” The app should answer both. The health field `guardrails_reachable` is false in direct mode.
+
+== Optionally release the GPU or discard the cache
+
+Choose the command that matches the resources you intend to keep. Each option works on a later run after the proxy was already removed.
+
+[cols="2,4",options="header"]
+|===
+|Desired outcome |Command
+|Remove the optional model Deployment, Service and NetworkPolicy. Keep the cached model weights. |`./grlab cleanup --remove-model`
+|Also permanently delete the workshop model-cache PVC. Future deployments need to populate it again. |`./grlab cleanup --remove-model --delete-model-cache`
+|===
+
+Append `--dry-run` to either command to review its exact scope. To resume the guarded path, run `./grlab nemo`, `./grlab rules`, and `./grlab test --expect rules`. Reapply `./grlab content` if you want the classifier again. The current terminal's saved rule overrides are reused. Use the xref:appendix-rules.adoc[rule appendix] to inspect or change them.

@@ -4,15 +4,9 @@ Run this module after Module 2 passes. You will serve NVIDIA Llama 3.1 Nemotron 
 
 == Check model-serving capacity
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
 oc -n "$LAB_NAMESPACE" get resourcequota
-----
-
-Node and storage-class inventories are cluster-scoped. Ask the platform operator to run the following checks from their own cluster session.
-
-[source,bash]
-----
 oc get storageclass
 oc get nodes -L nvidia.com/gpu.product \
   -o 'custom-columns=NODE:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product'
@@ -24,7 +18,7 @@ The init container fetches the pinned weight revision only when required files a
 
 == Deploy, probe and activate
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cat policies/content.yaml
 ./grlab content
@@ -37,7 +31,7 @@ The model-specific prompts are in `policies/prompts.yml`. An input check require
 
 == Return to the rules-only workshop
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ./grlab rules
 ./grlab test
@@ -45,9 +39,11 @@ The model-specific prompts are in `policies/prompts.yml`. An input check require
 
 This returns traffic to local checks. To release the GPU while preserving the downloaded weights, scale the model to zero after the rules-only test passes.
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc -n "$LAB_NAMESPACE" scale deploy/nemotron-safety-guard-vllm --replicas=0
 ----
 
 Running the content step again restores the replica and reuses the PVC. To finish with the classifier enabled, keep the `content` profile active and go to xref:module-4.adoc[Module 4].
+
+The default policy covers categories S1 through S13. The xref:appendix-rules.adoc[rule appendix] includes all 23 categories documented for the v3 model and lets you enable either classifier direction.

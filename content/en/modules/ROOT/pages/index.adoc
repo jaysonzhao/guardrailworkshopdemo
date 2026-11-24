@@ -6,47 +6,40 @@ A customer who asks how to reset a password should get instructions. A customer 
 |===
 |Module |What you change |How you know it worked
 
-|xref:pre-1.adoc[Pre-1] |Deploy the prebuilt banking app and connect its main model. |The playground returns the synthetic checking balance.
+|xref:pre-1.adoc[Pre-1] |Build the banking app and connect its main model. |The playground returns the synthetic checking balance.
 |xref:module-1.adoc[1] |Insert NeMo between the app and the model. |The app uses the proxy and its balance tool still works.
 |xref:module-2.adoc[2] |Apply input and output rules. |A synthetic OTP is blocked and ordinary reset guidance still passes.
 |xref:module-3.adoc[3 · optional] |Serve Nemotron Safety Guard on a GPU and add two classifier calls. |The proxy reports a classifier-specific refusal.
 |xref:module-4.adoc[4] |Exercise the application and inspect the active profile. |The automated check passes through the app on either learning path.
+|xref:module-5.adoc[5 · optional] |Remove NeMo and restore direct mode. |The app still answers and returns the fixture balance after the proxy is removed.
+|xref:appendix-rules.adoc[Appendix] |Choose by category and enable one rule at a time. |Each card pairs a guarded example with an allowed control.
 |===
 
 == Your environment
 
-Each participant signs into a dedicated OpenShift project. The hosted Terminal includes a matching OpenShift CLI, Python, PyYAML, curl and the executable workshop CLI. A local Linux or Dev Spaces terminal is also supported. During provisioning, the instructor builds the trusted Showroom, agent and NeMo images with an identity allowed to use binary Docker builds. The build needs the internal image registry, Red Hat UBI images, UBI RPM repositories for the proxy, and the Python package index. BuildConfig objects are removed after each build attempt. Participants need project edit access to deploy the prebuilt images; they do not need permission to create BuildConfigs or select a build strategy. The project also needs Routes and a network plugin enforcing Kubernetes NetworkPolicy. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model's serving ID, its base URL ending in `/v1`, its credential, and the MaaS subscription name if required.
+Use a Linux or Dev Spaces terminal with a current OpenShift 4.x CLI, Python 3.10+ with PyYAML 6, curl and Git or unzip. Use one dedicated project per participant or team. The project needs OpenShift Builds with Docker strategy, the integrated image registry, Routes, and a network plugin enforcing Kubernetes NetworkPolicy. Binary builds need access to the Red Hat UBI images, UBI RPM repositories for the proxy build, and the Python package index. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model's serving ID, its base URL ending in `/v1`, its credential, and the MaaS subscription name if required.
 
 Pre-1 through Module 2 and Module 4 can use a remote MaaS model and need no GPU in your lab project. Only Module 3 provisions model weights. It requires one available BF16-capable NVIDIA GPU with enough free memory for the 8B model, a working GPU device plugin, a 30 GiB RWO PVC, access to the serving image and weights, or a prepopulated cache.
 
-== Open your workspace
+== Start in the signed-in Showroom
 
-Open the Showroom HTTPS URL supplied by your instructor. Select your normal cluster identity provider, sign in and approve the requested project access on first use. The guide stays on the left. The *Terminal* tab starts a shell in a writable copy of the lab. The *OCP Console* tab opens the cluster console with the same identity provider. On clusters configured for embedding it appears beside the guide. On other clusters it opens in a browser tab. An existing cluster browser session can be reused.
+Open the instructor's Showroom Route and sign in with your OpenShift account. The *Terminal* tab uses that identity and opens in `/workspace/lab` with the participant files, executable `./grlab` and the cluster's `oc` client. *OCP Console* opens the cluster console with your cluster login. In the hosted guide, *Run* on a shell block sends that command to this Terminal. The *Banking playground* link becomes usable after Pre-1.
 
-In *Terminal*, run the following. Confirm that the username matches the console's user menu and the project matches your assignment. The Run button on marked command blocks sends the command to this terminal. Enter examples that contain your own values manually.
-
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
+pwd
 oc whoami
-oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
+echo "$LAB_NAMESPACE"
 ./grlab --help
 ----
 
-Edits under `/workspace/lab` survive switching tabs and reconnecting to the same pod. Export your work before the instructor replaces the pod. Shell variables belong to each connection. Open *Banking playground* above the guide after Pre-1 deploys the application.
-
-== Use your own terminal
-
-Download xref:attachment$lab-files.zip[the participant code ZIP] while signed in. The hosted Terminal already contains these files. For a laptop or Dev Spaces workspace, extract the ZIP, change to `guardrail-agent-lab/` (or `guardrail-agent-showroom/` from the full ZIP), and use an authenticated OpenShift CLI. Use Python 3.10 or newer.
+For local or Dev Spaces use, download xref:attachment$lab-files.zip[the participant code ZIP], unzip it and change to `guardrail-agent-lab/`. A full repository ZIP uses `guardrail-agent-showroom/`. In that directory install the Python dependency in a virtual environment, authenticate the local `oc` client and export your assigned `LAB_NAMESPACE`.
 
 [source,bash]
 ----
 python3 -m venv .venv
 . .venv/bin/activate
-python3 -m pip install -r requirements.txt
-./grlab --help
-oc whoami
+python -m pip install -r requirements.txt
 ----
-
-If an extraction tool discarded Unix permissions, run `chmod +x grlab` once. The local HTML preview provides the guide. Sign in through the deployed Route to use the hosted tabs and Run controls.
 
 Next, xref:pre-1.adoc[deploy the banking application].

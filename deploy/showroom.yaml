@@ -7,14 +7,10 @@ metadata:
     serviceaccounts.openshift.io/oauth-redirecturi.primary: /oauth/callback
 automountServiceAccountToken: false
 ---
-# A dedicated client secret recognized by the OpenShift OAuth server. Only the
-# OAuth container mounts its token. The account has no workshop RoleBinding.
 apiVersion: v1
 kind: Secret
+metadata: {name: grlab-oauth-client, annotations: {kubernetes.io/service-account.name: grlab-showroom}}
 type: kubernetes.io/service-account-token
-metadata:
-  name: grlab-oauth-client
-  annotations: {kubernetes.io/service-account.name: grlab-showroom}
 ---
 apiVersion: v1
 kind: Service
@@ -27,9 +23,7 @@ spec:
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
-metadata:
-  name: grlab-showroom
-  annotations: {haproxy.router.openshift.io/timeout-tunnel: 1h}
+metadata: {name: grlab-showroom, annotations: {haproxy.router.openshift.io/timeout-tunnel: 1h}}
 spec:
   to: {kind: Service, name: grlab-showroom}
   port: {targetPort: https}
@@ -105,9 +99,7 @@ spec:
         - name: portal
           image: SITE_IMAGE
           envFrom: [{configMapRef: {name: grlab-showroom-settings}}]
-          readinessProbe:
-            exec:
-              command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',8080),2).close()"]
+          readinessProbe: {exec: {command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',8080),2).close()"]}}
           resources: {requests: {cpu: 40m, memory: 64Mi}, limits: {cpu: 500m, memory: 256Mi}}
           securityContext: *restricted
           volumeMounts:
@@ -117,12 +109,8 @@ spec:
           image: SITE_IMAGE
           command: [/usr/local/bin/ttyd]
           args: [-i, lo, -p, '7681', -b, /terminal, -W, -m, '5', -H, X-Workshop-Session, -t, titleFixed=Guardrail terminal, -t, disableLeaveAlert=true, /opt/showroom/portal/start-shell]
-          env:
-            - name: LAB_NAMESPACE
-              valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
-          readinessProbe:
-            exec:
-              command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',7681),2).close()"]
+          env: [{name: LAB_NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}]
+          readinessProbe: {exec: {command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',7681),2).close()"]}}
           resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {cpu: '1', memory: 512Mi}}
           securityContext: *restricted
           volumeMounts:

@@ -2,15 +2,14 @@
 
 Run the acceptance checks through the same banking agent and chat API as the playground. The runner detects the active profile. Complete Module 2 first, or finish Module 3 if you want classifier evidence.
 
-From the hosted Terminal run the common check to exercise the active profile.
-
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
-./grlab test
-oc -n "$LAB_NAMESPACE" get deploy/grlab-rails -o 'jsonpath={.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'
+./grlab test --expect rules
+# If you completed the GPU step and kept it active, use this command instead.
+# ./grlab test --expect content
+oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
+  -o jsonpath='{.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'
 ----
-
-For an explicit acceptance gate, run `./grlab test --expect rules` or `./grlab test --expect content` according to the path you completed.
 
 [cols="2,3,3",options="header"]
 |===
@@ -26,17 +25,11 @@ For an explicit acceptance gate, run `./grlab test --expect rules` or `./grlab t
 
 == Try the API yourself
 
-In the hosted Terminal, set the URL to the in-project Service. In a local shell with the Pre-1 port-forward active, set `AGENT_URL=http://127.0.0.1:18080` instead.
+Use the service address below in the hosted Terminal. For a local port-forward, set `AGENT_URL=http://127.0.0.1:18080` in your workstation shell instead.
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
-export AGENT_URL=http://grlab-agent:8080
-----
-
-Send the following application requests. The browser's *Banking playground* link sends the same requests through the authenticated Route.
-
-[source,bash]
-----
+AGENT_URL="http://grlab-agent:8080"
 curl -fsS "$AGENT_URL/health"
 curl -fsS "$AGENT_URL/chat/completions" \
   -H 'Content-Type: application/json' \
@@ -53,7 +46,7 @@ The text reply lives at `choices[0].message.content`. For streaming, collect the
 [cols="2,3",options="header"]
 |===
 |Observation |Check
-|The playground is unreachable after a rollout |Check Pre-1 and the Showroom-to-agent ingress policy. Restart a local port-forward when applicable. Verify `oc -n "$LAB_NAMESPACE" get pods,svc`.
+|The playground is unreachable after a rollout |Re-run the port-forward. Verify `oc -n "$LAB_NAMESPACE" get pods,svc`.
 |Both safe chat and account lookup fail |Check the model ID, base URL including `/v1`, API key, subscription header and certificate trust. Pre-1 checks the same model before NeMo is inserted.
 |The safe question passes but the balance tool fails |Use a tool-capable model. Check the NeMo profile and confirm the app's `BASE_URL`. Look for upstream tool-call or validation errors.
 |A normal reset question is blocked |Compare the local input/output rules and, if enabled, the two model verdicts. Run the rules-only control against the same prompt.
@@ -61,3 +54,5 @@ The text reply lives at `choices[0].message.content`. For streaming, collect the
 |===
 
 The repository includes a repeatable local test in `tests/check_workshop.py`. It supplies fixed model replies to force output-only failures such as a leaked fictional marker and malformed classifier JSON. This makes it possible to prove a rule fires even when a live generation model normally avoids that output. Use synthetic inputs when collecting NeMo logs.
+
+For a customized policy, the suite reports disabled default checks as skipped. Use `./grlab catalog test RULE_ID` for the selected example. Continue to the xref:appendix-rules.adoc[rule appendix] or xref:module-5.adoc[optional direct-mode cleanup].

@@ -1,0 +1,69 @@
+= Appendix · Choose and try a guardrail rule
+
+Use this page after xref:module-2.adoc[Module 2] or xref:module-3.adoc[Module 3]. Choose a category, open a rule and compare its example with an allowed control. The catalog has 27 local banking rules, 23 Nemotron categories and three classifier settings. Each card names the module, direction and default state. You can browse the entire catalog offline.
+
+== Add one rule to your application
+
+. Select *Consent and customer care* and *Marketing enrollment without consent*. The input example is “Enroll this customer in marketing without consent.” The allowed control is “How does a customer change marketing preferences?”
+. Select *Run* beside the rehearsal command to see the local decision and its reason. Select *Run* beside the add command to save this choice in the Terminal's `policies/selection.yaml`. The web filters only narrow the list. The add and remove commands edit the saved selection.
+. Preview and publish the change to the active NeMo profile. Publishing rolls the proxy and checks both ordinary chat and the balance lookup.
+. Run the deployed example. In the *Banking playground*, send the two messages separately. The first returns a privacy refusal. The control can reach the main model.
+
+[source,bash,role=execute]
+----
+./grlab catalog sample marketing-consent
+./grlab catalog add marketing-consent
+./grlab catalog apply --dry-run
+----
+
+[source,bash,role=execute]
+----
+./grlab catalog apply
+./grlab catalog test marketing-consent
+----
+
+To undo just this addition, use the following commands. Other saved choices remain active.
+
+[source,bash,role=execute]
+----
+./grlab catalog remove marketing-consent
+./grlab catalog apply
+----
+
+== Build a policy one rule at a time
+
+When you want to demonstrate even the default rules from a blank starting point, stage an empty catalog in the dedicated lab project. This replaces all saved choices in this Terminal. Add the first rule *before* publishing. This example puts only the credential detector into the guarded path.
+
+[source,bash,role=execute]
+----
+./grlab catalog baseline empty
+./grlab catalog add credential
+./grlab catalog apply --dry-run
+----
+
+Publish with `./grlab catalog apply`, then use `./grlab catalog test credential`. Add each subsequent rule with `catalog add RULE_ID` and publish again. To build a classifier policy from this starting point, stage both a direction such as `model-input` and a category such as `s16` before publishing to the Module 3 profile. To return to the original workshop selection, stage `./grlab catalog baseline defaults`, preview, then apply. Use xref:module-5.adoc[Module 5] if your intended outcome is to remove the proxy entirely.
+
+== Read the evidence for each rule
+
+* *Local input or output.* `catalog sample` checks the example and control against that rule in isolation. `catalog test` checks the functions and selection mounted in the NeMo pod. The latter reports an earlier matching rule if several would block the same example. For output rules such as `collections-tone`, the sample is a *candidate assistant reply*. This gives a repeatable test independent of what wording the generation model chooses. The control should pass unchanged.
+* *Content safety.* Complete Module 3 for live model evidence. Start with `./grlab catalog show s16`, stage `s16`, publish and run `./grlab catalog test s16`. Its example asks for a false government endorsement. Its control asks how to verify an endorsement. A live test requires valid JSON, the selected adverse category and a safe control. A different category, a service error or a malformed verdict does not demonstrate that rule. Model predictions and overlapping categories can change the observed outcome. Use `./grlab test --expect content` for an application-level check.
+* *Direction and scope.* `model-input` and `model-output` control classifier calls independently. For a category to run, enable at least one direction and select that category. With both directions disabled, the content profile still has a deployed model but makes no classifier calls. The two direction samples use harassment as their example and need `s10` or comparable banking policy coverage. The banking addendum is a separate choice that can cover the same behavior as a category.
+* *Live and local.* `./grlab catalog status` lists active rules and local edits. `./grlab catalog choose` offers the same category and rule selection in a terminal. Repeated additions are idempotent. Rules-only mode saves model choices for Module 3 and uses the main model for answers. Copy `policies/selection.yaml` somewhere durable if you want to reuse the choices after rebuilding a Showroom pod.
+
+== Rule catalog
+
+include::partial$rule-catalog.adoc[]
+
+== What continues to apply
+
+The API validates message roles, the banking tool enforces its own fixture-account allowlist, and the app removes internal decision markers. NeMo validates its input format and size. While classifier checks are enabled, an unavailable classifier or invalid verdict produces a refusal. Multiple enabled controls can cover the same request. Use only synthetic examples when comparing profiles or testing direct mode.
+
+== NeMo 0.24.1 built-in flow reference
+
+The table lists the 33 rail manifests and all 78 named surfaces shipped with the pinned NeMo package. These are integration points for authors extending this repository. Vendor APIs, retrieval flows, fact-checkers and additional model rails can require their own credentials, model, knowledge base or agent wiring. The workshop picker above contains the configured, independently selectable policies for this banking application. To add a new local detector, add a catalog entry with a unique ID, phase, pattern, sample and allowed control, then rebuild the guide. Use the reference for other integrations.
+
+include::partial$upstream-rails.adoc[]
+
+See https://docs.nvidia.com/nemo/guardrails/v0.24.1/reference/rail-engine-support[NeMo rail and engine support] and https://build.nvidia.com/nvidia/llama-3_1-nemotron-safety-guard-8b-v3/modelcard[Nemotron Safety Guard v3 model card].
+
+Return to xref:module-4.adoc[testing the application] or xref:module-5.adoc[restoring the direct model connection].

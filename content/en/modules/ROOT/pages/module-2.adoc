@@ -11,7 +11,7 @@ Keep the main LLM for banking answers. Teach NeMo which requests to stop locally
 |Ordinary procedure |“How do I reset my online banking password?” |Give guidance without requesting a credential.
 |===
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
 cat policies/rules.yaml
 ./grlab rules
@@ -24,7 +24,7 @@ The committed configuration has just one model role, `main`. NeMo runs the seque
 
 Add a second, deliberately harmless workshop phrase to the patterns list. Keep the original training-override entry as a control.
 
-[source,bash]
+[source,bash,role=execute]
 ----
 python - <<'PY'
 from pathlib import Path
@@ -37,12 +37,14 @@ PY
 ./grlab rules
 ----
 
-Open *Banking playground* above the guide. If you are using a laptop port-forward, restart it after a pod replacement. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.
+Open *Banking playground* in the hosted guide, or restart a workstation port-forward if it closed. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.
 
-[source,bash,role="execute"]
+[source,bash,role=execute]
 ----
 oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
   -o jsonpath='{.spec.template.spec.volumes[0].configMap.name}{"\n"}'
 ----
 
 Each changed file produces a new ConfigMap name. Changing the pod template mounts that exact revision and starts a new NeMo process. If you have a GPU, continue to xref:module-3.adoc[Module 3]. Otherwise go directly to xref:module-4.adoc[the application tests].
+
+To select one of the 27 local checks and run a paired example and control, open the xref:appendix-rules.adoc[rule appendix].

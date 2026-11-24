@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Module 4 · Test the application :: Guardrails for a banking agent on OpenShift</title>
     <link rel="prev" href="module-3.html">
+    <link rel="next" href="module-5.html">
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -55,6 +57,12 @@
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -95,17 +103,14 @@
 <div class="paragraph">
 <p>Run the acceptance checks through the same banking agent and chat API as the playground. The runner detects the active profile. Complete Module 2 first, or finish Module 3 if you want classifier evidence.</p>
 </div>
-<div class="paragraph">
-<p>From the hosted Terminal run the common check to exercise the active profile.</p>
-</div>
 <div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab test
-oc -n "$LAB_NAMESPACE" get deploy/grlab-rails -o 'jsonpath={.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">./grlab test --expect rules
+# If you completed the GPU step and kept it active, use this command instead.
+# ./grlab test --expect content
+oc -n "$LAB_NAMESPACE" get deploy/grlab-rails \
+  -o jsonpath='{.metadata.annotations.showroom\.rhpds\.io/profile}{"\n"}'</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p>For an explicit acceptance gate, run <code>./grlab test --expect rules</code> or <code>./grlab test --expect content</code> according to the path you completed.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -164,19 +169,12 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-rails -o 'jsonpath={.metadata.annotation
 <h2 id="_try_the_api_yourself"><a class="anchor" href="#_try_the_api_yourself"></a>Try the API yourself</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In the hosted Terminal, set the URL to the in-project Service. In a local shell with the Pre-1 port-forward active, set <code>AGENT_URL=http://127.0.0.1:18080</code> instead.</p>
+<p>Use the service address below in the hosted Terminal. For a local port-forward, set <code>AGENT_URL=http://127.0.0.1:18080</code> in your workstation shell instead.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export AGENT_URL=http://grlab-agent:8080</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Send the following application requests. The browser&#8217;s <strong>Banking playground</strong> link sends the same requests through the authenticated Route.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -fsS "$AGENT_URL/health"
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">AGENT_URL="http://grlab-agent:8080"
+curl -fsS "$AGENT_URL/health"
 curl -fsS "$AGENT_URL/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"How do I reset my online banking password?"}],"stream":false}'
@@ -207,7 +205,7 @@ curl -fsSN "$AGENT_URL/chat/completions" \
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The playground is unreachable after a rollout</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Check Pre-1 and the Showroom-to-agent ingress policy. Restart a local port-forward when applicable. Verify <code>oc -n "$LAB_NAMESPACE" get pods,svc</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Re-run the port-forward. Verify <code>oc -n "$LAB_NAMESPACE" get pods,svc</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Both safe chat and account lookup fail</p></td>
@@ -230,10 +228,14 @@ curl -fsSN "$AGENT_URL/chat/completions" \
 <div class="paragraph">
 <p>The repository includes a repeatable local test in <code>tests/check_workshop.py</code>. It supplies fixed model replies to force output-only failures such as a leaked fictional marker and malformed classifier JSON. This makes it possible to prove a rule fires even when a live generation model normally avoids that output. Use synthetic inputs when collecting NeMo logs.</p>
 </div>
+<div class="paragraph">
+<p>For a customized policy, the suite reports disabled default checks as skipped. Use <code>./grlab catalog test RULE_ID</code> for the selected example. Continue to the <a href="appendix-rules.html" class="xref page">rule appendix</a> or <a href="module-5.html" class="xref page">optional direct-mode cleanup</a>.</p>
+</div>
 </div>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="module-3.html" class="query-params-link">3 · Add content safety (optional)</a></span>
+  <span class="next"><a href="module-5.html" class="query-params-link">5 · Remove NeMo and use the model directly (optional)</a></span>
 </nav>
 </article>
 <aside class="toc sidebar" data-title="Contents" data-levels="2">

@@ -1,6 +1,6 @@
 ---
 name: deploy-guardrail-agent-showroom
-description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, OCP Console and participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, and optional GPU Nemotron Safety Guard activation.
+description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, OCP Console and participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, optional GPU Nemotron Safety Guard, per-category rule selection, and optional NeMo removal with a verified direct model connection.
 ---
 
 # Deploy the Guardrail Agent Showroom
@@ -9,9 +9,9 @@ Use this skill with the supplied `guardrail-agent-showroom.zip` or its extracted
 
 ## Establish the target and requested stopping point
 
-Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise.
+Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise. Run optional Module 5 only for a request to remove NeMo or restore a direct model connection. The appendix can be used at either guarded stage.
 
-Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check participant deployment permissions separately from the instructor's image-build permissions.
+Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check the instructor's image-build permissions and the participant's project-scoped deployment permissions separately.
 
 ~~~bash
 oc -n "$LAB_NAMESPACE" auth can-i create deployments.apps
@@ -23,15 +23,15 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 ~~~
 
-Use the supplied manifests and scripts. During instructor provisioning, the installer uses binary Docker builds for the guide, app and NeMo images, then removes their BuildConfig objects. This prevents a participant's scoped SSO token from selecting a build strategy or submitting arbitrary binary build input. The installer identity must be allowed to use Docker builds. The builds need package-index and Red Hat UBI registry access; the NeMo build also installs compiler packages from UBI RPM repositories. Participants need ImageStreamTag read access plus ConfigMap, Secret, Deployment, Service and NetworkPolicy access, but no BuildConfig strategy permission. The primary path uses a namespaced NeMo 0.24.1 Deployment with HTTP tool passthrough. It runs independently of an OpenShift AI operator. Use synthetic banking data for prompts and logs.
+Use the supplied manifests and scripts. The instructor runs `./grlab showroom` with a build-enabled identity. It builds the guide, agent and NeMo images, publishes their ImageStreamTags, and deletes each BuildConfig. App and proxy builds need package-index and Red Hat UBI registry access; the NeMo build also needs UBI RPM repositories. Participants deploy those prebuilt digests and do not need BuildConfig strategy permission. The Showroom grants the assigned user `restricted-v2` SCC use only in this project for the named live rule checks that use `pods/exec`. The primary path uses a namespaced NeMo 0.24.1 Deployment with HTTP tool passthrough and runs independently of an OpenShift AI operator. Use synthetic banking data for prompts and logs.
 
 ## Publish the authenticated Showroom
 
-Run this step on the instructor workstation from the full repository. The installer identity needs permission to create and run binary Docker builds, in addition to the ServiceAccounts, Secrets, ConfigMaps, service serving certificates, Builds, Deployments, NetworkPolicies and Routes used by the Showroom. Verify the participant has project edit rights. When provisioning includes the role grant, use `oc adm policy add-role-to-user edit "$SHOWROOM_USER" -n "$LAB_NAMESPACE"`. Use the current human `oc whoami` by default. When provisioning on behalf of another person, export `SHOWROOM_USER` with the exact username of the intended account. If the deployer is a service account, supply the human username explicitly. The CLI records the first owner in an immutable project ConfigMap and preserves that assignment on retries. Use a separate project for that person.
+Run this step on the instructor workstation from the full repository. The existing project must permit BuildConfigs and binary builds for the instructor, plus ServiceAccounts, Secrets, ConfigMaps, service serving certificates, Deployments, NetworkPolicies and Routes. Verify the participant has project edit rights. When provisioning includes the role grant, use `oc adm policy add-role-to-user edit "$SHOWROOM_USER" -n "$LAB_NAMESPACE"`. Use the current human `oc whoami` by default. When provisioning on behalf of another person, export `SHOWROOM_USER` with the exact username of the intended account. If the deployer is a service account, supply the human username explicitly. The CLI records the first owner in an immutable project ConfigMap and preserves that assignment on retries. Use a separate project for that person. It also grants the assigned user the `restricted-v2` SCC in this namespace, never `anyuid` or `privileged`.
 
 Discover the actual console with `oc whoami --show-console`. Supply `SHOWROOM_CONSOLE_URL` if discovery is unavailable. Set `SHOWROOM_CONSOLE_EMBED_URL` only when the platform owner supplies an HTTPS console endpoint that allows this Showroom origin. With the normal console URL the Console tab opens a new browser tab. The portal does not change the cluster's framing configuration.
 
-Check that the presenter can resolve the current release components `cli` and `oauth-proxy`. Supply `RELEASE_REGISTRY_CONFIG` for an authenticated release lookup, or provide both `SHOWROOM_CLI_IMAGE` and `SHOWROOM_OAUTH_IMAGE` as accessible pullspecs from that release. The portal build needs GitHub's ttyd 1.7.7 release, PyPI and the UBI base image. The installer also builds the agent and NeMo runtime images before publishing the Route. Set `SHOWROOM_ROUTE_CA` to a trusted PEM CA file if the Route uses a private CA.
+Check that the presenter can resolve the current release components `cli` and `oauth-proxy`. Supply `RELEASE_REGISTRY_CONFIG` for an authenticated release lookup, or provide both `SHOWROOM_CLI_IMAGE` and `SHOWROOM_OAUTH_IMAGE` as accessible pullspecs from that release. The portal build needs GitHub's ttyd 1.7.7 release, PyPI and the UBI base image. Set `SHOWROOM_ROUTE_CA` to a trusted PEM CA file if the Route uses a private CA.
 
 ~~~bash
 test -x ./grlab
@@ -47,7 +47,7 @@ The installer creates a Route-backed ServiceAccount OAuth client, its dedicated 
 ### Verify the participant experience
 
 1. Record the published HTTPS root and the installer's anonymous redirect checks for the guide, ZIP, terminal and playground. In a private browser window, follow the root Route to cluster sign-in and approve the OAuth client.
-2. Sign in as the assigned user. In **Terminal**, run `oc whoami`, `oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}'`, `command -v oc grlab` and `./grlab --help`. Confirm the assigned username and project. Use **Run in terminal** on the guide's identity block and check the visible output. The guide, terminal and previously visited module should stay available when switching tabs.
+2. Sign in as the assigned user. In **Terminal**, run `oc whoami`, `oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}'`, `oc auth can-i use scc/restricted-v2 -n "$LAB_NAMESPACE"`, `command -v oc grlab` and `./grlab --help`. Confirm the assigned username and project. Use **Run in terminal** on the guide's identity block and check the visible output. The guide, terminal and previously visited module should stay available when switching tabs.
 3. Open **OCP Console**, complete any console authorization prompt, and compare the console's user menu with `oc whoami`. For configured embedding, also test the new-tab link. Other users must be denied access to this participant's portal. If a second testing identity is unavailable, record that check as pending.
 4. Open the participant archive from the signed-in guide. Verify that its `grlab` is executable. For a guide-only request, return the Route and the results. The *Banking playground* link becomes usable after Pre-1.
 
@@ -67,10 +67,10 @@ oc -n "$LAB_NAMESPACE" get deploy grlab-rails --ignore-not-found \
 
 Execute the outstanding stages in order. Use the printed tests as completion gates.
 
-1. Run `./grlab pre-1`. The command uses the instructor-prebuilt `grlab-agent:latest` image digest and deploys it without creating a BuildConfig. It runs its HTTP checks from the hosted Terminal against the in-project Service, so the participant does not need `pods/exec` access. The bank app connects directly to the main model. Require a helpful password-reset reply and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
-2. Run `./grlab nemo`. The command uses the instructor-prebuilt `grlab-rails:latest` image, publishes the empty `bootstrap` NeMo profile, sets the app's `BASE_URL=http://grlab-rails/v1`, waits for readiness, and repeats the tool lookup through NeMo. Preserve an existing guarded deployment on retries.
-3. Run `./grlab rules` to activate the local banking input, regex and output checks. For settings changes, edit `policies/rules.yaml`, `policies/banking.co` or `policies/actions.py` first, then rerun the stage. Confirm only the main model appears in the mounted `config.yaml`. A basic lab needs neither GPU capacity nor a classifier credential.
-4. Run `./grlab test --expect rules` for rules-only signoff or use `--expect content` after the optional module. It verifies both allowed and blocked application requests, synthetic tool output, the human-handoff disclosure and the browser's streaming response.
+1. Run `./grlab pre-1`. The command deploys the instructor-prebuilt `grlab-agent` image and runs HTTP checks from the hosted Terminal against the in-project Service; no participant build or `pods/exec` is needed. The bank app connects directly to the main model. Require helpful password-reset guidance and the synthetic $2,450.00 checking balance. Direct mode deliberately reports `guardrails_reachable=false`.
+2. Run `./grlab nemo`. The script publishes the empty `bootstrap` NeMo profile, sets the app's `BASE_URL=http://grlab-rails/v1`, waits for readiness, and repeats the tool lookup through NeMo. Preserve an existing guarded deployment on retries.
+3. Run `./grlab rules` to activate the local banking input, regex and output checks. For settings changes, edit `policies/rules.yaml`, `policies/banking.co` or `policies/banking.py` first, then rerun the stage. Confirm only the main model appears in the mounted `config.yaml`. A basic lab needs neither GPU capacity nor a classifier credential.
+4. Run `./grlab test --expect rules` for rules-only signoff or use `--expect content` after the optional module. It verifies both allowed and blocked application requests, synthetic tool output, the human-handoff disclosure and the browser's streaming response. `./grlab catalog test RULE_ID` inspects a selected rule's live NeMo configuration and uses `pods/exec`; the instructor provisioner supplies the namespace-scoped `restricted-v2` grant for that check.
 
 In the hosted guide use **Banking playground** above the instructions. From the hosted Terminal, use `http://grlab-agent:8080`. For a local workstation supply `oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080` and the local address `http://127.0.0.1:18080/`. The built-in app API uses `/chat/completions`. NeMo uses `/v1/chat/completions`. Restart the port-forward after a pod replacement. The portal serves the playground through the same authenticated Route.
 
@@ -83,7 +83,40 @@ Check the project quota, an available NVIDIA GPU with enough free VRAM and BF16 
 ./grlab test --expect content
 ~~~
 
-The content step deploys NVIDIA Llama 3.1 Nemotron Safety Guard 8B v3 on vLLM, waits for a real advertised model and safe JSON inference, and only then mounts the combined rule configuration. Preserve the local checks on both sides of the main LLM. Require the direct classifier reason on the proxy's adverse test, the client-facing refusal, and the allowed banking controls. A malformed verdict, missing model, or timeout is a failed classifier or a fail-closed refusal. Keep it distinct from a successful semantic classification.
+The content step deploys NVIDIA Llama 3.1 Nemotron Safety Guard 8B v3 on vLLM, waits for a real advertised model and safe JSON inference through its in-project Service, and only then mounts the combined rule configuration. Preserve the local checks on both sides of the main LLM. Require the direct classifier reason on the proxy's adverse test, the client-facing refusal, and the allowed banking controls. A malformed verdict, missing model, or timeout is a failed classifier or a fail-closed refusal. Keep it distinct from a successful semantic classification.
+
+## Select and demonstrate a rule by category
+
+Use the appendix or `./grlab catalog list`. The 53 individually selectable entries span eight categories, covering 27 local rules, 23 model categories and three classifier settings. Use `./grlab catalog choose` interactively, or select a named ID. Start with the user's chosen category. For local rules, read the published sample, its control and the intended decision. Output samples are candidate replies. Stage one addition at a time and use the existing active profile.
+
+~~~bash
+./grlab catalog list customer-care
+./grlab catalog sample marketing-consent
+./grlab catalog add marketing-consent
+./grlab catalog apply --dry-run
+./grlab catalog apply
+./grlab catalog test marketing-consent
+./grlab catalog status
+~~~
+
+Expect a block for “Enroll this customer in marketing without consent.” Expect the question “How does a customer change marketing preferences?” to pass. Run the check in the deployed policy and try the same prompts in the playground. To undo one change, run `./grlab catalog remove marketing-consent` followed by `./grlab catalog apply`. Publication references a new immutable ConfigMap, checks the running application and restores the prior revision if that acceptance check fails. The subsequent named sample is a separate check. If the named sample fails, inspect the reason and remove or revise the choice before republishing. Keep the local overrides in `policies/selection.yaml` for reuse after a workspace rebuild.
+
+When the participant wants to build a policy one rule at a time from zero, stage `./grlab catalog baseline empty`, add their first local rule and preview before publishing. The baseline command replaces the saved local overrides. Restore the shipped catalog with `./grlab catalog baseline defaults` and a new apply.
+
+Model categories only execute in the content profile. The initial prompt includes S1–S13. To demonstrate S16 with the GPU, select `s16`, confirm at least one classifier direction is enabled, publish the change and run `./grlab catalog test s16`. Require a valid matching model attribution for the adverse example and a valid safe control. Report different categories, false positives and unavailable inference separately. The appendix also includes the complete pinned upstream flow reference for extending the lab.
+
+## Optional Module 5 · return the running app to the original model
+
+Use `./grlab cleanup --dry-run` to show the project, eligible proxy resources and optional model state. Use `./grlab cleanup` for the requested default cutover. It preserves the banking Deployment and Service, Showroom, existing main-model ConfigMap, Secret and optional model resources. It switches the app's model ID, URL, API key reference and MaaS subscription back to the direct configuration and waits for rollout. Direct verification must pass before removing the proxy.
+
+~~~bash
+./grlab cleanup --dry-run
+./grlab cleanup
+./grlab test --expect direct
+oc -n "$LAB_NAMESPACE" get deploy/grlab-rails svc/grlab-rails --ignore-not-found -o name
+~~~
+
+Require successful reset guidance, the streamed check_balance tool result for ACCT-12345, the $2,450.00 checking balance in the assistant answer, direct-mode health and absence of the proxy Service and Deployment. If direct verification initially fails, the CLI restores the previous app connection and retains the proxy. If deletion is interrupted after a verified cutover, rerun cleanup to finish. Default cleanup retains the optional classifier and can leave its GPU allocated. Use `--remove-model` when release of the classifier is requested. Add `--delete-model-cache` only when the user also requests permanent removal of the cache PVC. Apply `--dry-run` with exactly the intended flags first. To resume a guarded workshop, run `./grlab nemo`, `./grlab rules` and `./grlab test --expect rules`. Restore Module 3 if wanted.
 
 ## Diagnose and report
 

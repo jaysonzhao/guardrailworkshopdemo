@@ -8,6 +8,7 @@
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -54,6 +55,12 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
   </li>
 </ul>
   </li>
@@ -111,7 +118,7 @@
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="pre-1.html" class="xref page">Pre-1</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Deploy the prebuilt banking app and connect its main model.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build the banking app and connect its main model.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The playground returns the synthetic checking balance.</p></td>
 </tr>
 <tr>
@@ -134,6 +141,16 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Exercise the application and inspect the active profile.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The automated check passes through the app on either learning path.</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="module-5.html" class="xref page">5 · optional</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Remove NeMo and restore direct mode.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The app still answers and returns the fixture balance after the proxy is removed.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="appendix-rules.html" class="xref page">Appendix</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Choose by category and enable one rule at a time.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Each card pairs a guarded example with an allowed control.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -142,7 +159,7 @@
 <h2 id="_your_environment"><a class="anchor" href="#_your_environment"></a>Your environment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Each participant signs into a dedicated OpenShift project. The hosted Terminal includes a matching OpenShift CLI, Python, PyYAML, curl and the executable workshop CLI. A local Linux or Dev Spaces terminal is also supported. During provisioning, the instructor builds the trusted Showroom, agent and NeMo images with an identity allowed to use binary Docker builds. The build needs the internal image registry, Red Hat UBI images, UBI RPM repositories for the proxy, and the Python package index. BuildConfig objects are removed after each build attempt. Participants need project edit access to deploy the prebuilt images; they do not need permission to create BuildConfigs or select a build strategy. The project also needs Routes and a network plugin enforcing Kubernetes NetworkPolicy. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model&#8217;s serving ID, its base URL ending in <code>/v1</code>, its credential, and the MaaS subscription name if required.</p>
+<p>Use a Linux or Dev Spaces terminal with a current OpenShift 4.x CLI, Python 3.10+ with PyYAML 6, curl and Git or unzip. Use one dedicated project per participant or team. The project needs OpenShift Builds with Docker strategy, the integrated image registry, Routes, and a network plugin enforcing Kubernetes NetworkPolicy. Binary builds need access to the Red Hat UBI images, UBI RPM repositories for the proxy build, and the Python package index. The main model must offer OpenAI-compatible chat completions and tool calling, with an endpoint reachable from the pods. Have the model&#8217;s serving ID, its base URL ending in <code>/v1</code>, its credential, and the MaaS subscription name if required.</p>
 </div>
 <div class="paragraph">
 <p>Pre-1 through Module 2 and Module 4 can use a remote MaaS model and need no GPU in your lab project. Only Module 3 provisions model weights. It requires one available BF16-capable NVIDIA GPU with enough free memory for the 8B model, a working GPU device plugin, a 30 GiB RWO PVC, access to the serving image and weights, or a prepopulated cache.</p>
@@ -150,43 +167,28 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_open_your_workspace"><a class="anchor" href="#_open_your_workspace"></a>Open your workspace</h2>
+<h2 id="_start_in_the_signed_in_showroom"><a class="anchor" href="#_start_in_the_signed_in_showroom"></a>Start in the signed-in Showroom</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Open the Showroom HTTPS URL supplied by your instructor. Select your normal cluster identity provider, sign in and approve the requested project access on first use. The guide stays on the left. The <strong>Terminal</strong> tab starts a shell in a writable copy of the lab. The <strong>OCP Console</strong> tab opens the cluster console with the same identity provider. On clusters configured for embedding it appears beside the guide. On other clusters it opens in a browser tab. An existing cluster browser session can be reused.</p>
-</div>
-<div class="paragraph">
-<p>In <strong>Terminal</strong>, run the following. Confirm that the username matches the console&#8217;s user menu and the project matches your assignment. The Run button on marked command blocks sends the command to this terminal. Enter examples that contain your own values manually.</p>
+<p>Open the instructor&#8217;s Showroom Route and sign in with your OpenShift account. The <strong>Terminal</strong> tab uses that identity and opens in <code>/workspace/lab</code> with the participant files, executable <code>./grlab</code> and the cluster&#8217;s <code>oc</code> client. <strong>OCP Console</strong> opens the cluster console with your cluster login. In the hosted guide, <strong>Run</strong> on a shell block sends that command to this Terminal. The <strong>Banking playground</strong> link becomes usable after Pre-1.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc whoami
-oc config view --minify -o 'jsonpath={.contexts[0].context.namespace}{"\n"}'
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">pwd
+oc whoami
+echo "$LAB_NAMESPACE"
 ./grlab --help</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Edits under <code>/workspace/lab</code> survive switching tabs and reconnecting to the same pod. Export your work before the instructor replaces the pod. Shell variables belong to each connection. Open <strong>Banking playground</strong> above the guide after Pre-1 deploys the application.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_use_your_own_terminal"><a class="anchor" href="#_use_your_own_terminal"></a>Use your own terminal</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Download <a href="_attachments/lab-files.zip" class="xref attachment">the participant code ZIP</a> while signed in. The hosted Terminal already contains these files. For a laptop or Dev Spaces workspace, extract the ZIP, change to <code>guardrail-agent-lab/</code> (or <code>guardrail-agent-showroom/</code> from the full ZIP), and use an authenticated OpenShift CLI. Use Python 3.10 or newer.</p>
+<p>For local or Dev Spaces use, download <a href="_attachments/lab-files.zip" class="xref attachment">the participant code ZIP</a>, unzip it and change to <code>guardrail-agent-lab/</code>. A full repository ZIP uses <code>guardrail-agent-showroom/</code>. In that directory install the Python dependency in a virtual environment, authenticate the local <code>oc</code> client and export your assigned <code>LAB_NAMESPACE</code>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python3 -m venv .venv
 . .venv/bin/activate
-python3 -m pip install -r requirements.txt
-./grlab --help
-oc whoami</code></pre>
+python -m pip install -r requirements.txt</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p>If an extraction tool discarded Unix permissions, run <code>chmod +x grlab</code> once. The local HTML preview provides the guide. Sign in through the deployed Route to use the hosted tabs and Run controls.</p>
 </div>
 <div class="paragraph">
 <p>Next, <a href="pre-1.html" class="xref page">deploy the banking application</a>.</p>

@@ -1,8 +1,8 @@
 interface:
   display_name: Deploy the Guardrail Agent Showroom
-  short_description: Deploy the OpenShift SSO banking agent workshop
-  default_prompt: Use $deploy-guardrail-agent-showroom to deploy the signed-in guide, verify the
-    Console and Terminal tabs, and test the banking guardrails on OpenShift.
+  short_description: Deploy the OpenShift guardrail workshop and manage its rules
+  default_prompt: Use $deploy-guardrail-agent-showroom to deploy the signed-in guide,
+    select and test banking rules, or restore the direct model connection on OpenShift.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

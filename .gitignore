@@ -8,3 +8,5 @@ __pycache__/
 .test-agent/
 .test-nemo/
 .antora-build.*/
+
+policies/.grlab-selection.lock

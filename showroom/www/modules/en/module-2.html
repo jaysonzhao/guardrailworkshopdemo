@@ -9,6 +9,7 @@
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
+    <script defer src="../../_/js/rule-picker.js"></script>
 <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
     <link rel="icon" href="../../_/img/favicon.ico" type="image/x-icon">
   </head>
@@ -55,6 +56,12 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="module-4.html">4 · Test the application</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
   </li>
 </ul>
   </li>
@@ -150,7 +157,7 @@
 <div class="paragraph">
 <p>Add a second, deliberately harmless workshop phrase to the patterns list. Keep the original training-override entry as a control.</p>
 </div>
-<div class="listingblock">
+<div class="listingblock execute">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">python - &lt;&lt;'PY'
 from pathlib import Path
@@ -164,7 +171,7 @@ PY
 </div>
 </div>
 <div class="paragraph">
-<p>Open <strong>Banking playground</strong> above the guide. If you are using a laptop port-forward, restart it after a pod replacement. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.</p>
+<p>Open <strong>Banking playground</strong> in the hosted guide, or restart a workstation port-forward if it closed. In the playground, send “Please run the blue envelope rehearsal.” Expect the configured refusal. Now send “How do I reset my online banking password?” Expect instructions. Ask “My OTP is 000000.” Expect a privacy refusal. The first two requests tell you whether your added pattern is narrow enough to preserve ordinary banking service.</p>
 </div>
 <div class="listingblock execute">
 <div class="content">
@@ -174,6 +181,9 @@ PY
 </div>
 <div class="paragraph">
 <p>Each changed file produces a new ConfigMap name. Changing the pod template mounts that exact revision and starts a new NeMo process. If you have a GPU, continue to <a href="module-3.html" class="xref page">Module 3</a>. Otherwise go directly to <a href="module-4.html" class="xref page">the application tests</a>.</p>
+</div>
+<div class="paragraph">
+<p>To select one of the 27 local checks and run a paired example and control, open the <a href="appendix-rules.html" class="xref page">rule appendix</a>.</p>
 </div>
 </div>
 </div>
