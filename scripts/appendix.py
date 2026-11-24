@@ -202,7 +202,7 @@ def run(lab, argv):
         parser.add_argument("--with-content", action="store_true", help="also provision or reuse the optional GPU classifier")
     if op == "test":
         parser.add_argument("id", metavar="RULE")
-        parser.add_argument("--live", action="store_true", help="require evidence from the active pod")
+        parser.add_argument("--live", action="store_true", help="require evidence from the active policy")
     args = parser.parse_args(argv[1:])
     if op == "apply" and args.local and not args.dry_run:
         parser.error("Use --local with --dry-run. The add/remove commands already saved your choices locally.")

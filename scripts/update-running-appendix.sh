@@ -62,4 +62,25 @@ if original_code!=new_code:
     replace(entry,new_code.encode(),stat.S_IMODE(entry.stat().st_mode))
 print("Updated the current Terminal. Rule selection and running workloads were preserved.")
 ' < "$root/scripts/appendix.py"
+for name in catalog_cli.py rule_sample.py; do
+  oc -n "$LAB_NAMESPACE" exec -i deployment/grlab-showroom -c terminal -- python3 -c '
+import ast, os, stat, sys, tempfile
+from pathlib import Path
+target=Path("/workspace/lab/scripts")/sys.argv[1]
+source=sys.stdin.buffer.read()
+ast.parse(source.decode("utf-8"))
+mode=stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o644
+with tempfile.NamedTemporaryFile("wb", dir=target.parent, delete=False) as f:
+    tmp=Path(f.name)
+    f.write(source)
+    f.flush()
+    os.fsync(f.fileno())
+try:
+    tmp.chmod(mode)
+    os.replace(tmp,target)
+finally:
+    tmp.unlink(missing_ok=True)
+print("Updated participant script:", target.name)
+' "$name" < "$root/scripts/$name"
+done
 oc -n "$LAB_NAMESPACE" exec deployment/grlab-showroom -c terminal -- /bin/bash -ec 'cd /workspace/lab && ./grlab catalog apply --local --dry-run'

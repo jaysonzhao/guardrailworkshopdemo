@@ -2,7 +2,10 @@
 import argparse
 import hashlib
 import json
+import os
 import subprocess
+import tempfile
+from pathlib import Path
 import yaml
 
 import rulebook
@@ -169,5 +172,17 @@ def run(lab, argv):
             raise RuntimeError("Run ./grlab catalog apply to upgrade the live policy to this edition.")
         if args.id not in selected(data):
             raise RuntimeError("Rule is disabled. Stage it with catalog add, then run catalog apply.")
-        lab.oc("exec","-i","deployment/grlab-rails","-c","nemo","--","python","-",f"/opt/rail-configs/{stage}",json.dumps(row),
-               data=(lab.ROOT/"scripts/rule_sample.py").read_text(), capture=False)
+        # Test against the active ConfigMap from the participant Terminal. This
+        # follows the OAuth token's project scope and does not require pods/exec.
+        with tempfile.TemporaryDirectory(prefix="grlab-rule-check-") as tmp:
+            folder=Path(tmp)
+            for name in ("banking.py","active_rules.json","config.yaml","prompts.yml"):
+                if name in data:
+                    (folder/name).write_text(data[name])
+            if not (folder/"banking.py").is_file():
+                raise RuntimeError("The active policy ConfigMap is missing banking.py.")
+            if row["engine"]=="model":
+                if not (folder/"config.yaml").is_file() or not (folder/"prompts.yml").is_file():
+                    raise RuntimeError("The active content profile is missing its model configuration.")
+                os.environ.setdefault("NEMOTRON_API_KEY","workshop-local")
+            demonstrate(row,folder,json.loads(data["active_rules.json"]),live=True)

@@ -1,4 +1,4 @@
-"""Evaluate synthetic examples using the same decision functions mounted in the NeMo pod."""
+"""Evaluate synthetic examples against a selected policy snapshot."""
 import importlib.util
 import json
 from pathlib import Path
@@ -96,7 +96,7 @@ def demonstrate(rule, folder, policy, live=False):
 
 
 if __name__ == "__main__":
-    # The caller pipes this script into the running NeMo container with a synthetic rule case.
+    # CLI entrypoint for a staged policy directory and synthetic rule case.
     root = Path(sys.argv[1])
     chosen = json.loads(sys.argv[2])
     demonstrate(chosen, root, json.loads((root/"active_rules.json").read_text()), live=True)
