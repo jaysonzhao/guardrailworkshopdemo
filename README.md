@@ -22,6 +22,12 @@ python -m pip install -r requirements.txt
 
 Open the reported HTTPS Route and sign in with the cluster identity assigned to the project. By default the presenter’s interactive `oc whoami` owns the Showroom. When provisioning for a participant, set `SHOWROOM_USER` to their exact OpenShift username before running `./grlab showroom`, and grant that participant edit rights on the dedicated project. The terminal uses the participant’s OAuth credential, a session-scoped kubeconfig, the release-matched `oc` and an executable `./grlab` in `/workspace/lab`. The OCP Console tab opens the cluster console with the same login. Its default top-level presentation works with standard console framing policies. The guide’s *Run* buttons send commands to the hosted Terminal, and *Banking playground* opens the protected app after Pre-1.
 
+### Embed the Console beside the guide
+
+The standalone Showroom can display the Console in its split pane when `SHOWROOM_CONSOLE_EMBED_URL` points to an HTTPS endpoint that permits framing from the exact Showroom origin. If the canonical cluster Console blocks framing, use the isolated dedicated-ingress design in [the Console ingress reference](skills/deploy-guardrail-agent-showroom/references/showroom-console-ingress.md). It uses a release-matched Console frontend, a separate OAuth callback and a dedicated router. The router deletes `X-Frame-Options` and sets `frame-ancestors` for the trusted Showroom origin; it does not change response headers on the shared default router. The full provisioning, rollback and SSO verification procedure is in the [deployment skill](skills/deploy-guardrail-agent-showroom/SKILL.md#embed-ocp-console-in-the-showroom).
+
+Configure and verify the console endpoint before setting `SHOWROOM_CONSOLE_EMBED_URL` and restarting the Showroom. Keep `SHOWROOM_CONSOLE_URL` as the normal external console link. Browser sign-in may need to be completed once at the console URL in the same tab before returning to the embedded view.
+
 The presenter needs access to the cluster release’s `cli` and `oauth-proxy` component pullspecs, the OpenShift OAuth server, ingress and service-serving certificates. For clusters with private CAs or restricted image access, see the deployment instructions in `skills/deploy-guardrail-agent-showroom/SKILL.md`. The RHDP-managed layout is also present in `site.yml`, `ui-config.yml` and `content/en/antora.yml`.
 
 ## Run the workshop
@@ -71,7 +77,7 @@ When upgrading an existing Showroom without replacing its pod, run `./scripts/up
 | `scripts/lab.py`, `scripts/policy.py` | Stage deployment, configuration rendering and rollback |
 | `scripts/appendix.py`, `scripts/catalog_cli.py`, `scripts/rulebook.py` | Standalone rule rehearsal, preview, selection and live publication |
 | `scripts/verify.py`, `scripts/probe_model.py`, `tests/` | HTTP acceptance checks, model-service inference probe and repeatable local integration tests |
-| `skills/deploy-guardrail-agent-showroom/SKILL.md` | OpenShift deployment skill |
+| `skills/deploy-guardrail-agent-showroom/` | OpenShift deployment skill, dedicated console-ingress reference and skill metadata |
 
 The protected request path is **playground → LangGraph agent → NeMo → main LLM**. In the content profile, NeMo also calls **Nemotron Safety Guard 8B v3** for incoming and outgoing text. The generated answer and the safety verdict come from different model roles. The optional model uses the fork's weight revision and Red Hat AI Inference Server CUDA image. The guide and the agent work on plain OpenShift. This repository packages NeMo 0.24.1 as a namespaced Deployment to provide the HTTP tool-call passthrough used in the labs. The fork's TrustyAI CR, CPU topic classifier and tracing stack are documented in the source attribution.
 
