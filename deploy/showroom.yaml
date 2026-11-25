@@ -85,7 +85,7 @@ spec:
             - --skip-provider-button=true
             - --proxy-websockets=true
             - '--openshift-sar={"namespace":"$(LAB_NAMESPACE)","resource":"pods","verb":"get"}'
-            - --scope=user:info user:check-access role:edit:$(LAB_NAMESPACE):!
+            - --scope=user:info user:check-access role:edit:$(LAB_NAMESPACE):! role:grlab-showroom-restricted-v2-use:$(LAB_NAMESPACE)
             - --redirect-url=$(SHOWROOM_ORIGIN)/oauth/callback
           envFrom: [{configMapRef: {name: grlab-showroom-settings}}]
           ports: [{name: oauth, containerPort: 8443}]

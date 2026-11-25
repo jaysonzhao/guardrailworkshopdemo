@@ -80,6 +80,21 @@ def claim_owner(lab, owner, existing):
     if existing["data"].get("user") != owner:
         raise RuntimeError("This Showroom belongs to another user. Select a separate project.")
 
+def grant_scc_exec_scope(lab, owner):
+    # The OAuth proxy's role:edit scope filters out SCC use, even when the
+    # user's namespace RoleBinding already grants it. Give the token a named,
+    # namespace-filtered role containing only use of restricted-v2.
+    role_name="grlab-showroom-restricted-v2-use"
+    lab.apply(lab.resource("rbac.authorization.k8s.io/v1","ClusterRole",role_name,rules=[{
+        "apiGroups":["security.openshift.io"],
+        "resources":["securitycontextconstraints"],
+        "resourceNames":["restricted-v2"],
+        "verbs":["use"]
+    }]))
+    lab.apply(lab.resource("rbac.authorization.k8s.io/v1","RoleBinding",role_name,
+        roleRef={"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":role_name},
+        subjects=[{"apiGroup":"rbac.authorization.k8s.io","kind":"User","name":owner}]))
+
 def deploy(lab):
     www=lab.ROOT/"showroom/www"
     if not (www/"modules/en/index.html").is_file():
@@ -102,6 +117,7 @@ def deploy(lab):
     refs=images(lab.oc)
     claim_owner(lab,owner,assignment)
     lab.oc("adm","policy","add-scc-to-user","restricted-v2",owner,"-n",lab.NS,capture=False)
+    grant_scc_exec_scope(lab,owner)
     image=lab.build("grlab-showroom","showroom")
     # Build trusted participant runtimes with the instructor identity. The
     # signed-in participant only deploys the resulting image digests.

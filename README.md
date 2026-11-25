@@ -8,7 +8,7 @@ Open `showroom/www/modules/en/index.html` from the extracted ZIP. For a local HT
 
 ## Publish the guide on OpenShift
 
-Use an authenticated instructor context and a dedicated, existing project with access to binary Docker builds, the internal registry, Deployments, Services, Routes and NetworkPolicies. Create the project with `oc new-project guardrail-lab-user1` if needed. Each participant uses their own project. The guide itself needs no model credentials. `./grlab showroom` prebuilds the trusted portal, agent and NeMo images as the instructor, removes their BuildConfigs, and grants the assigned participant the `restricted-v2` SCC only in this project. The participant deploys the prebuilt image digests and does not need BuildConfig strategy access.
+Use an authenticated instructor context and a dedicated, existing project with access to binary Docker builds, the internal registry, Deployments, Services, Routes and NetworkPolicies. Create the project with `oc new-project guardrail-lab-user1` if needed. Each participant uses their own project. The guide itself needs no model credentials. `./grlab showroom` prebuilds the trusted portal, agent and NeMo images as the instructor, removes their BuildConfigs, and grants the assigned participant `restricted-v2` SCC use in this project. The Showroom OAuth token includes only a namespace-filtered role for that SCC permission so live rule checks can use `pods/exec`. The participant deploys the prebuilt image digests and does not need BuildConfig strategy access.
 
 ~~~bash
 export LAB_NAMESPACE=guardrail-lab-user1
