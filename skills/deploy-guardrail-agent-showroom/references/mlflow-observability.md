@@ -12,7 +12,7 @@ Before changing anything, inspect the environment:
 ./grlab mlflow precheck
 ```
 
-This command is read-only. It checks the DataScienceCluster MLflow Operator state, MLflow API, shared server availability, dashboard ingress, project configuration and app tracing annotations. Use instructor cluster read permissions for complete platform checks. A participant Terminal with project-only access reports cluster-wide items as unknown and still checks the project-local items.
+This command is read-only. It checks the DataScienceCluster MLflow Operator state, MLflow API, shared server availability, dashboard ingress, project configuration and app tracing annotations. Use instructor cluster read permissions for complete platform checks. A participant Terminal with project-only access reads the saved project endpoint and checks project-local items; cluster-wide details appear as not visible and expected permission errors are suppressed. The participant does not need broader authorization.
 
 ```bash
 oc whoami

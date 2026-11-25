@@ -115,7 +115,7 @@
 <p>Use an instructor workstation with the updated repository, a logged-in OpenShift CLI and the participant&#8217;s dedicated project in <code>LAB_NAMESPACE</code>. Publish the updated Showroom with <code>./grlab showroom</code> if the participant is using an older portal. Its Terminal workspace resets when the Showroom pod is replaced, so save local rule selections first.</p>
 </div>
 <div class="paragraph">
-<p>Start with the read-only precheck. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Run it with the instructor&#8217;s cluster read access for a complete platform result. In the participant Terminal, cluster-wide checks may show as unknown while the project checks still run.</p>
+<p>Start with the read-only precheck. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Run it with the instructor&#8217;s cluster read access for a complete platform result. The participant Terminal keeps its project-only access: it uses the saved project endpoint and reports cluster-wide details as not visible, without printing permission errors. This does not require broader participant authorization.</p>
 </div>
 <div class="listingblock">
 <div class="content">

@@ -6,7 +6,7 @@ Follow one banking request from the app into the MLflow experiment in your OpenS
 
 Use an instructor workstation with the updated repository, a logged-in OpenShift CLI and the participant's dedicated project in `LAB_NAMESPACE`. Publish the updated Showroom with `./grlab showroom` if the participant is using an older portal. Its Terminal workspace resets when the Showroom pod is replaced, so save local rule selections first.
 
-Start with the read-only precheck. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Run it with the instructor's cluster read access for a complete platform result. In the participant Terminal, cluster-wide checks may show as unknown while the project checks still run.
+Start with the read-only precheck. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Run it with the instructor's cluster read access for a complete platform result. The participant Terminal keeps its project-only access: it uses the saved project endpoint and reports cluster-wide details as not visible, without printing permission errors. This does not require broader participant authorization.
 
 [source,bash]
 ----

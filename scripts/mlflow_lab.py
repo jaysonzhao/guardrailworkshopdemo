@@ -8,7 +8,7 @@ import sys
 import subprocess
 import time
 from urllib.error import HTTPError
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from cleanup import agent_container, owned
@@ -26,19 +26,34 @@ DNS = r"[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
 PAGE = "/develop-train/mlflow/experiments"
 
 
-def lookup(lab, kind, name, namespace):
-    raw = lab.oc("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json")
+def quiet_oc(lab, *args):
+    """Run a read without exposing expected scoped-RBAC denials on stderr."""
+    command = ["oc", "-n", lab.NS, *args]
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode:
+        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
+    return (result.stdout or "").strip()
+
+
+def quiet_get(lab, kind, name):
+    raw = quiet_oc(lab, "get", kind, name, "--ignore-not-found", "-o", "json")
     return json.loads(raw) if raw else None
 
 
-def dashboard(lab, route=None):
+def lookup(lab, kind, name, namespace, quiet=False):
+    args = ("get", kind, name, "-n", namespace, "--ignore-not-found", "-o", "json")
+    raw = quiet_oc(lab, *args) if quiet else lab.oc(*args)
+    return json.loads(raw) if raw else None
+
+
+def dashboard(lab, route=None, quiet=False):
     """Prefer the admitted OpenShift Route serving the shared AI gateway."""
     namespace, name = "openshift-ingress", "data-science-gateway"
     if route:
         if not re.fullmatch(DNS + "/" + DNS, route):
             raise ValueError("--route takes namespace/route-name")
         namespace, name = route.split("/")
-    obj = lookup(lab, "route.route.openshift.io", name, namespace)
+    obj = lookup(lab, "route.route.openshift.io", name, namespace, quiet=quiet)
     if obj:
         spec = obj["spec"]
         if not spec.get("tls") or spec.get("path", "/") not in (None, "", "/"):
@@ -52,14 +67,15 @@ def dashboard(lab, route=None):
     elif route:
         raise RuntimeError(f"Dashboard Route {route} was not found.")
     else:
-        gw = lookup(lab, "gateways.gateway.networking.k8s.io", name, namespace)
+        gw = lookup(lab, "gateways.gateway.networking.k8s.io", name, namespace, quiet=quiet)
         hosts = {l["hostname"] for l in (gw or {}).get("spec", {}).get("listeners", [])
                  if l.get("protocol") == "HTTPS" and l.get("hostname") and "*" not in l["hostname"]}
         source = f"Gateway {namespace}/{name}"
     if len(hosts) != 1 or not re.fullmatch(DNS + r"(?:\." + DNS + r")+", next(iter(hosts), "")):
         raise RuntimeError("Cannot select a unique dashboard host. Use --route NAMESPACE/NAME for the canonical AI dashboard Route.")
     host = hosts.pop()
-    print(f"Discovered {source}: https://{host}", file=sys.stderr)
+    if not quiet:
+        print(f"Discovered {source}: https://{host}", file=sys.stderr)
     return "https://" + host
 
 
@@ -139,13 +155,37 @@ def prepare(lab, args):
     print("Project MLflow page:", env["GRLAB_MLFLOW_DASHBOARD_URL"])
 
 
+def saved_dashboard(settings, namespace):
+    """Return the configured dashboard origin only when both saved URLs agree."""
+    data = (settings or {}).get("data", {})
+    tracking = urlsplit(data.get("MLFLOW_TRACKING_URI", ""))
+    page = urlsplit(data.get("GRLAB_MLFLOW_DASHBOARD_URL", ""))
+    origin = f"{tracking.scheme}://{tracking.netloc}" if tracking.netloc else ""
+    if (tracking.scheme != "https" or not tracking.hostname or tracking.username or tracking.password
+            or tracking.path != "/mlflow" or tracking.query or tracking.fragment
+            or page.scheme != "https" or page.netloc != tracking.netloc or page.username or page.password
+            or page.path != PAGE or page.fragment or parse_qs(page.query) != {"workspace": [namespace]}
+            or data.get("MLFLOW_WORKSPACE") != namespace):
+        return None
+    return origin
+
+
 def precheck(lab, args):
-    """Inspect platform, dashboard, project setup and app state without writes."""
+    """Inspect platform and project readiness without writes or broad permissions."""
     print(f"MLflow environment precheck (read-only) | Project: {lab.NS}")
+    try:
+        settings = quiet_get(lab, "configmap", SETTINGS)
+        project_known = True
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+        settings, project_known = None, False
+    prepared = bool(settings and settings.get("data", {}).get("MLFLOW_TRACKING_URI")
+                    and settings.get("data", {}).get("MLFLOW_WORKSPACE") == lab.NS)
+    configured_origin = saved_dashboard(settings, lab.NS)
+
     state = None
     operator_known = False
     try:
-        items = json.loads(lab.oc("get", DSC, "-o", "json"))["items"]
+        items = json.loads(quiet_oc(lab, "get", DSC, "-o", "json"))["items"]
         if len(items) == 1:
             cluster = items[0]
             state = cluster.get("spec", {}).get("components", {}).get("mlflowoperator", {}).get("managementState", "Removed")
@@ -155,12 +195,12 @@ def precheck(lab, args):
         else:
             print(f"MLflow Operator: expected one DataScienceCluster, found {len(items)}")
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
-        print("MLflow Operator: unknown (requires cluster-level read access)")
+        print("MLflow Operator: not visible to this identity (cluster-level read required)")
 
     crd = None
     crd_known = False
     try:
-        raw = lab.oc("get", "customresourcedefinition", MLFLOWS, "--ignore-not-found", "-o", "json")
+        raw = quiet_oc(lab, "get", "customresourcedefinition", MLFLOWS, "--ignore-not-found", "-o", "json")
         crd = json.loads(raw) if raw else None
         crd_known = True
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
@@ -169,13 +209,14 @@ def precheck(lab, args):
                                     for c in crd.get("status", {}).get("conditions", [])))
     print("MLflow API:", "CRD established" if established else
           "not installed" if crd_known and not crd else
-          "not established" if crd_known else "unknown (requires cluster-level read access)")
+          "not established" if crd_known else "not visible to this identity (cluster-level read required)")
+
     instance = None
     server_known = False
     if established:
         ns = ["-n", args.applications_namespace] if crd["spec"].get("scope") == "Namespaced" else []
         try:
-            raw = lab.oc("get", MLFLOWS, "mlflow", *ns, "--ignore-not-found", "-o", "json")
+            raw = quiet_oc(lab, "get", MLFLOWS, "mlflow", *ns, "--ignore-not-found", "-o", "json")
             instance = json.loads(raw) if raw else None
             server_known = True
         except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
@@ -187,63 +228,67 @@ def precheck(lab, args):
         elif server_known:
             print("Shared MLflow server: missing")
         else:
-            print("Shared MLflow server: unknown (check instructor cluster permissions)")
+            print("Shared MLflow server: not visible to this identity (instructor access required)")
     else:
-        print("Shared MLflow server: not checked (MLflow API unavailable or not visible)")
+        print("Shared MLflow server: not checked (MLflow API is not visible)")
 
     origin = None
     try:
-        origin = dashboard(lab, args.route)
-        print("Dashboard ingress: ready |", origin)
+        origin = dashboard(lab, args.route, quiet=True)
+        print("Dashboard ingress: live route |", origin)
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
-        print("Dashboard ingress: unavailable |", str(exc))
+        if configured_origin:
+            origin = configured_origin
+            print("Dashboard ingress: saved project configuration |", origin)
+        elif isinstance(exc, subprocess.CalledProcessError):
+            print("Dashboard ingress: not visible to this identity (instructor route access required)")
+        else:
+            print("Dashboard ingress: unavailable |", str(exc))
 
-    try:
-        settings = lab.get("configmap", SETTINGS)
-        prepared = bool(settings and settings.get("data", {}).get("MLFLOW_TRACKING_URI")
-                        and settings.get("data", {}).get("MLFLOW_WORKSPACE") == lab.NS)
-        project_known = True
-    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
-        settings, prepared, project_known = None, False, False
     print("Project integration:", "prepared" if prepared else "not prepared" if project_known else "unknown (project read access required)")
     try:
-        app = lab.get("deployment", "grlab-agent")
+        app = quiet_get(lab, "deployment", "grlab-agent")
         app_known = True
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
         app, app_known = None, False
     annotations = {}
     if app:
         annotations = app.get("spec", {}).get("template", {}).get("metadata", {}).get("annotations", {})
-        print("Banking app tracing:", "enabled" if annotations.get(BASE_IMAGE) and annotations.get(REVISION) else "disabled")
-    elif app_known:
-        print("Banking app tracing: app not deployed")
+        tracing_enabled = bool(annotations.get(BASE_IMAGE) and annotations.get(REVISION))
+        print("Banking app tracing:", "enabled" if tracing_enabled else "disabled")
     else:
-        print("Banking app tracing: unknown (project read access required)")
+        tracing_enabled = False
+        print("Banking app tracing:", "app not deployed" if app_known else "unknown (project read access required)")
 
     available = bool(instance and any(c.get("type") == "Available" and c.get("status") == "True"
                                       for c in instance.get("status", {}).get("conditions", [])))
-    if not crd_known or (established and not server_known):
-        print("Next: rerun this precheck with the instructor's cluster read permissions to confirm the platform status.")
+    if not crd_known:
+        print("Platform detail: cluster-scoped checks need the instructor's cluster read context; project settings remain available here.")
     elif crd_known and not crd:
         print("Next: ask the platform administrator to enable the MLflow Operator or select an existing shared server.")
     elif crd_known and crd and not established:
         print("Next: inspect the MLflow Operator and wait for its API to become Established, then rerun this precheck.")
-    elif operator_known and state != "Managed" and not available:
+    if operator_known and state != "Managed" and not available:
         print("Next: ask the platform administrator to enable MLflow or select an existing shared server.")
     if server_known and not instance:
         print("Next: ask the instructor to select a shared server; use --create-demo only on a dedicated workshop cluster.")
     elif instance and not available:
         print("Next: wait for the shared MLflow server to become Available, then rerun this precheck.")
-    if not origin:
-        print("Next: have the instructor verify the OpenShift AI dashboard Route or pass its namespace/name with --route.")
     if project_known and not prepared:
         print("Next: run ./grlab mlflow prepare with the instructor project context.")
     if app_known and not app:
         print("Next: deploy the banking app with Pre-1, then run ./grlab mlflow enable in the participant Terminal.")
-    elif app and not annotations.get(BASE_IMAGE):
-        print("Next: run ./grlab mlflow enable in the participant Terminal.")
-    if available and origin and prepared and app:
-        print("Tracing readiness:", "already enabled" if annotations.get(BASE_IMAGE) else "ready to enable")
+    elif app and not tracing_enabled:
+        print("Next: run ./grlab mlflow enable, then ./grlab mlflow test to verify live MLflow access.")
+    if prepared and origin and app and not tracing_enabled:
+        if available:
+            print("Tracing readiness: ready to enable")
+        elif not server_known:
+            print("Tracing readiness: project prepared; run mlflow test after enabling to verify current server access.")
+        else:
+            print("Tracing readiness: not ready; resolve the shared server status above.")
+    elif prepared and origin and app and tracing_enabled:
+        print("Tracing readiness: tracing is configured; run ./grlab mlflow test to verify a persisted trace.")
     else:
         print("Tracing readiness: not fully confirmed; use the checks above to find the missing prerequisite.")
     print("Precheck made no changes.")
