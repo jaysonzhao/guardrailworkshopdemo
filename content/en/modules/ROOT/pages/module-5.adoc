@@ -47,3 +47,5 @@ Choose the command that matches the resources you intend to keep. Each option wo
 |===
 
 Append `--dry-run` to either command to review its exact scope. To resume the guarded path, run `./grlab nemo`, `./grlab rules`, and `./grlab test --expect rules`. Reapply `./grlab content` if you want the classifier again. The current terminal's saved rule overrides are reused. Use the xref:appendix-rules.adoc[rule appendix] to inspect or change them.
+
+If you enabled xref:module-6.adoc[MLflow tracing], run `./grlab mlflow test` after cleanup to record a direct-mode request in the same experiment.

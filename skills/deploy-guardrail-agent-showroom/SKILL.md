@@ -1,6 +1,6 @@
 ---
 name: deploy-guardrail-agent-showroom
-description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, an embedded OCP Console without a popup, a dedicated workshop console ingress, participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, optional GPU Nemotron Safety Guard, per-category rule selection, and optional NeMo removal with a verified direct model connection.
+description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, an embedded OCP Console without a popup, a dedicated workshop console ingress, participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, optional GPU Nemotron Safety Guard, per-category rule selection, optional NeMo removal with a verified direct model connection, and optional banking-app observability with OpenShift AI 3.5.x MLflow and Route-discovered dashboard links.
 ---
 
 # Deploy the Guardrail Agent Showroom
@@ -9,11 +9,11 @@ Use this skill with the supplied `guardrail-agent-showroom.zip` or its extracted
 
 ## Start with the participant's requested action
 
-For a console-only change, jump to **Embed OCP Console in the Showroom**. A running portal can be updated independently of the banking app and NeMo modules. For an appendix browse, selection, dry run or local test, jump directly to **Use the appendix at any time**. In the hosted Terminal the files and Python dependency are already present. For an offline workstation, use the extracted participant or repository directory and install `requirements.txt` if necessary. Skip OpenShift sign-in, permission checks, build checks and provider setup for this path. Use the cluster setup below for publishing, live testing or deploying the Showroom.
+For OpenShift AI MLflow, tracing, runs or a dashboard link, jump to **Optional Module 6 · observe the banking app with MLflow**. For a console-only change, jump to **Embed OCP Console in the Showroom**. A running portal can be updated independently of the banking app and NeMo modules. For an appendix browse, selection, dry run or local test, jump directly to **Use the appendix at any time**. In the hosted Terminal the files and Python dependency are already present. For an offline workstation, use the extracted participant or repository directory and install `requirements.txt` if necessary. Skip OpenShift sign-in, permission checks, build checks and provider setup for this path. Use the cluster setup below for publishing, live testing or deploying the Showroom.
 
 ## Establish the target and requested stopping point
 
-Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise. Run optional Module 5 only for a request to remove NeMo or restore a direct model connection. The appendix is independent of the numbered modules. Use it before Pre-1, during a module, or after cleanup.
+Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise. Run optional Module 5 only for a request to remove NeMo or restore a direct model connection. Run Module 6 when the user asks for application observability. It works after Pre-1 with or without NeMo. The appendix is independent of the numbered modules. Use it before Pre-1, during a module, or after cleanup.
 
 Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check the permissions and build APIs needed for the selected steps.
 
@@ -274,6 +274,31 @@ oc -n "$LAB_NAMESPACE" get deploy/grlab-rails svc/grlab-rails --ignore-not-found
 ~~~
 
 Require successful reset guidance, the streamed check_balance tool result for ACCT-12345, the $2,450.00 checking balance in the assistant answer, direct-mode health and absence of the proxy Service and Deployment. If direct verification initially fails, the CLI restores the previous app connection and retains the proxy. If deletion is interrupted after a verified cutover, rerun cleanup to finish. Default cleanup retains the optional classifier and can leave its GPU allocated. Use `--remove-model` when release of the classifier is requested. Add `--delete-model-cache` only when the user also requests permanent removal of the cache PVC. Apply `--dry-run` with exactly the intended flags first. To resume a guarded workshop, run `./grlab nemo`, `./grlab rules` and `./grlab test --expect rules`. Restore Module 3 if wanted.
+
+## Optional Module 6 · observe the banking app with MLflow
+
+Use the companion repository's executable `./grlab mlflow`. Start with the dedicated project in `LAB_NAMESPACE` and an existing Pre-1 banking application for the participant steps. Use the updated portal to expose the toolbar link on an existing Showroom. Save terminal-local edits before replacing its pod.
+
+Start with the read-only `./grlab mlflow precheck`. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Use instructor cluster read permissions for a complete platform result; the participant Terminal may report cluster-wide checks as unknown while checking its own project. Then inspect the operator-managed shared server and prepare the assigned project. Discover the actual dashboard hostname from the admitted `Route/data-science-gateway` in `openshift-ingress`. The CLI can resolve a concrete Gateway HTTPS listener on a Gateway-only install. For custom ingress supply the actual canonical dashboard Route as `--route NAMESPACE/NAME`. Do this with the instructor context. The participant reads the saved project URL with their existing Terminal permissions. For a link-only request, run `./grlab mlflow link` immediately. Without prepared settings it discovers the dashboard Route and prints the integrated project URL. Use `./grlab mlflow link --route NAMESPACE/NAME` to check a custom or changed Route.
+
+~~~bash
+./grlab mlflow platform
+./grlab mlflow prepare
+~~~
+
+If the operator or server is absent and the requested deployment includes provisioning a demo instance on a dedicated workshop cluster, run `./grlab mlflow platform --create-demo`, then prepare. This enables the DataScienceCluster MLflow Operator, creates a missing `MLflow/mlflow` server with a 10 GiB RWO PVC and SQLite and waits for availability. Keep any existing shared server, database and artifacts. The file-backed demo stores trace spans in the MLflow backend database and does not need artifact serving; do not set `serveArtifacts` with this PVC configuration. On a cluster using a private gateway CA, create a project ConfigMap containing `ca-bundle.crt` and pass `--ca-configmap NAME` to prepare. The prepare command builds a separate SDK-enabled image, creates a project writer identity and grants the assigned participant read access. Supply `--viewer USER` if preparing without a Showroom assignment. Use synthetic banking data.
+
+From the Showroom Terminal execute the participant steps in direct or guarded mode.
+
+~~~bash
+./grlab mlflow enable
+./grlab mlflow test
+./grlab mlflow link
+~~~
+
+Match the chat trace ID to the persisted MLflow trace, check the `guardrailed_agent_request` root and verify the saved smoke run, latency, span count and current backend. Open **MLflow in OpenShift AI** beside **Banking playground** or the Module 6 page link. It enters the integrated experiment in the workshop project. Give the user the full clickable OpenShift AI URL printed by `test` for the exact run and by `link` for the project's Experiments page. Use `/mlflow` on the dashboard host as the SDK tracking endpoint. Its integrated browser path starts at `/develop-train/mlflow/experiments`. If operating outside the cluster, forward `svc/grlab-agent` to local port 18080 and use `./grlab mlflow test --agent http://127.0.0.1:18080`.
+
+To turn off app observability on request, run `./grlab mlflow disable` followed by `./grlab test`. The current model backend is preserved. The experiment stays accessible. For RBAC checks, private CA configuration, trace details or troubleshooting, see [Module 6 operations](references/mlflow-observability.md).
 
 ## Diagnose and report
 

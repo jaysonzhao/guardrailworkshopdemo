@@ -104,6 +104,7 @@ spec:
           securityContext: *restricted
           volumeMounts:
             - {name: sessions, mountPath: /run/workshop}
+            - {name: mlflow-link, mountPath: /etc/showroom-mlflow, readOnly: true}
             - {name: api-ca, mountPath: /run/api-ca, readOnly: true}
         - name: terminal
           image: SITE_IMAGE
@@ -125,6 +126,11 @@ spec:
               - secret: {name: grlab-oauth-client, items: [{key: token, path: token}]}
               - configMap: {name: kube-root-ca.crt, items: [{key: ca.crt, path: ca.crt}]}
               - downwardAPI: {items: [{path: namespace, fieldRef: {fieldPath: metadata.namespace}}]}
+        - name: mlflow-link
+          configMap:
+            name: grlab-mlflow-settings
+            optional: true
+            items: [{key: GRLAB_MLFLOW_DASHBOARD_URL, path: project-url}]
         - {name: api-ca, configMap: {name: kube-root-ca.crt}}
         - {name: tls, secret: {secretName: grlab-showroom-tls}}
         - {name: cookie, secret: {secretName: grlab-showroom-cookie}}

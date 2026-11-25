@@ -1,13 +1,9 @@
 import logging
-import os
 import re
-import time
 from contextlib import contextmanager
 from contextvars import ContextVar
 from os import getenv
-from typing import Optional
 
-from dotenv import load_dotenv
 
 logger = logging.getLogger("tracing")
 logger.setLevel(logging.INFO)
@@ -51,6 +47,14 @@ _PENDING_GUARDRAIL_REJECTION: ContextVar[tuple[str, str] | None] = ContextVar(
 )
 
 
+_EXPERIMENT_ID = None
+_REQUEST_TRACE_ID = ContextVar("grlab_request_trace_id", default=None)
+
+
+def experiment_id():
+    return _EXPERIMENT_ID
+
+
 def _sanitize_trace_value(value):
     """Keep useful trace payloads while redacting common customer secrets."""
     if isinstance(value, str):
@@ -83,7 +87,7 @@ def set_agent_request_outputs(span, outputs) -> None:
 @contextmanager
 def agent_request_span(inputs=None):
     """Provide a request-scoped MLflow parent span with scrubbed input data."""
-    if not getenv("MLFLOW_TRACKING_URI"):
+    if not _EXPERIMENT_ID:
         yield None
         return
 
@@ -91,6 +95,8 @@ def agent_request_span(inputs=None):
 
     with mlflow.start_span(name="guardrailed_agent_request") as span:
         try:
+            _REQUEST_TRACE_ID.set(span.trace_id)
+            mlflow.update_current_trace(tags={"workshop.backend": getenv("GRLAB_BACKEND_MODE", "direct")})
             if inputs is not None:
                 span.set_inputs(_sanitize_trace_value(inputs))
         except Exception as exc:
@@ -99,6 +105,7 @@ def agent_request_span(inputs=None):
 
 
 def clear_pending_guardrail_rejection() -> None:
+    _REQUEST_TRACE_ID.set(None)
     _PENDING_GUARDRAIL_REJECTION.set(None)
 
 
@@ -121,7 +128,7 @@ def record_guardrail_rejection(
     The tags intentionally accept only short codes. Never pass prompt text,
     model output, identifiers, or the raw NeMo error message here.
     """
-    if not getenv("MLFLOW_TRACKING_URI"):
+    if not _EXPERIMENT_ID:
         return
 
     if not isinstance(reason, str) or not _TRACE_CODE_RE.fullmatch(reason):
@@ -147,7 +154,7 @@ def record_guardrail_rejection(
             # trace to avoid ever tagging a stale request.
             if not allow_completed_trace:
                 return
-            trace_id = mlflow.get_last_active_trace_id(thread_local=True)
+            trace_id = _REQUEST_TRACE_ID.get()
             if trace_id:
                 mlflow.flush_trace_async_logging()
                 for key, value in tags.items():
@@ -164,162 +171,23 @@ def record_guardrail_rejection(
         )
 
 
-def check_mlflow_health(
-    mlflow_tracking_uri: str, max_wait_time: int = 5, retry_interval: int = 1
-) -> None:
-    """
-    Check MLflow health by trying the /health endpoint. If it fails, retry for a certain duration before giving up.
-    args:
-        mlflow_tracking_uri: base URI of the MLflow server
-        max_wait_time: total time to keep retrying before giving up (in seconds)
-        retry_interval: time to wait between retries (in seconds)
-    """
-    import requests
-
-    mlflow_health_endpoint = "/health"
-    mlflow_url = f"{mlflow_tracking_uri.rstrip('/')}{mlflow_health_endpoint}"
-
-    # Build auth and TLS config. This is only needed for
-    # the raw requests.get() health check. The MLflow client SDK
-    # handles these env vars natively for all other calls.
-    # See docs/mlflow-openshift-auth-and-tls.md for full details.
-    headers = {}
-    token = getenv("MLFLOW_TRACKING_TOKEN")
-    tracking_auth = getenv("MLFLOW_TRACKING_AUTH", "")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-        logger.debug("[Health Check] Using MLFLOW_TRACKING_TOKEN for authentication")
-    elif tracking_auth in ("kubernetes", "kubernetes-namespaced"):
-        sa_token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-        if not os.path.isfile(sa_token_path):
-            logger.warning(
-                "[Health Check] MLFLOW_TRACKING_AUTH=%s but SA token not found at %s",
-                tracking_auth,
-                sa_token_path,
-            )
-        else:
-            with open(sa_token_path) as f:
-                headers["Authorization"] = f"Bearer {f.read().strip()}"
-            logger.debug(
-                "[Health Check] Using MLFLOW_TRACKING_AUTH=%s for authentication",
-                tracking_auth,
-            )
-
-    cert_path = getenv("MLFLOW_TRACKING_SERVER_CERT_PATH")
-    if getenv("MLFLOW_TRACKING_INSECURE_TLS", "").lower() in ("true", "1", "yes"):
-        verify = False
-        logger.warning(
-            "[Health Check] TLS verification disabled (MLFLOW_TRACKING_INSECURE_TLS=true). "
-            "Consider using MLFLOW_TRACKING_SERVER_CERT_PATH instead."
-        )
-    elif cert_path:
-        if not os.path.isfile(cert_path):
-            logger.warning(
-                "[Health Check] MLFLOW_TRACKING_SERVER_CERT_PATH does not exist: %s — falling back to system CAs",
-                cert_path,
-            )
-            verify = True
-        else:
-            verify = cert_path
-            logger.debug("[Health Check] TLS verify using cert: %s", cert_path)
-    else:
-        verify = True
-
-    start_time = time.time()
-
-    while True:
-        remaining = max_wait_time - (time.time() - start_time)
-        if remaining <= 0:
-            logger.error(
-                f"MLflow server is unavailable after {max_wait_time} seconds of checking."
-            )
-            raise RuntimeError(
-                "MLflow server is unavailable. Please start the server or check the URI."
-            )
-
-        try:
-            response = requests.get(
-                mlflow_url, timeout=min(5, remaining), headers=headers, verify=verify
-            )
-            if response.status_code == 200:
-                logger.info(
-                    f"MLflow health check passed at {mlflow_url} with status code {response.status_code}."
-                )
-                return  # Success, exit the function without error
-            else:
-                logger.warning(
-                    f"MLflow returned status code {response.status_code} at {mlflow_url}\n"
-                    f"  Status Code: {response.status_code}\n"
-                    f"  Reason: {response.reason}"
-                )
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Failed to connect to MLflow at {mlflow_url}: {e}")
-
-        logger.warning(f"Retrying in {retry_interval} seconds...")
-        time.sleep(retry_interval)
-
-
 def enable_tracing() -> None:
-    """
-    Enable MLflow tracing if MLFLOW_TRACKING_URI is set.
-
-    Behavior:
-    1. If MLFLOW_TRACKING_URI is not set: tracing is skipped.
-    2. If MLFLOW_TRACKING_URI is set:
-       - Try to connect to the server.
-       - If the server is reachable: tracing is enabled.
-       - If the server is unreachable: log a warning and continue without tracing.
-    """
-    load_dotenv()
-    tracking_uri: Optional[str] = getenv("MLFLOW_TRACKING_URI")
-    if not tracking_uri:
-        logger.info("[Tracing] MLFLOW_TRACKING_URI not set. Tracing is disabled.")
+    """Initialize the application tracer using the SDK's authenticated experiment API."""
+    global _EXPERIMENT_ID
+    _EXPERIMENT_ID = None
+    uri = getenv("MLFLOW_TRACKING_URI")
+    if not uri:
         return
-
     try:
         import mlflow
         import mlflow.langchain
-    except ModuleNotFoundError as e:
-        raise ModuleNotFoundError(
-            "MLFLOW_TRACKING_URI is set but mlflow is not installed. "
-            "Install it with: uv sync --extra tracing"
-        ) from e
 
-    # Check if server is reachable
-    try:
-        try:
-            health_check_timeout = int(getenv("MLFLOW_HEALTH_CHECK_TIMEOUT", "5"))
-        except ValueError:
-            health_check_timeout = 5
-        check_mlflow_health(
-            mlflow_tracking_uri=tracking_uri, max_wait_time=health_check_timeout
-        )
-        logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
-    except RuntimeError as e:
-        logger.warning(
-            f"[Tracing] MLflow server is unreachable at {tracking_uri}. "
-            f"Tried connecting for {health_check_timeout}s. Continuing without tracing. Error: {e}"
-        )
-        return
-
-    # Server is reachable → enable tracing
-    try:
-        mlflow.set_tracking_uri(tracking_uri)
-        experiment_name: str = getenv(
-            "MLFLOW_EXPERIMENT_NAME", "default-agent-experiment"
-        )
-        mlflow.set_experiment(experiment_name)
-        mlflow.config.enable_async_logging()
-
-        # LangGraph invokes async chains. Inline tracing preserves the active
-        # manual request span as the root of the autologged graph trace.
+        mlflow.set_tracking_uri(uri)
+        experiment = mlflow.set_experiment(getenv("MLFLOW_EXPERIMENT_NAME", "guardrail-banking-agent"))
         mlflow.langchain.autolog(run_tracer_inline=True)
-
-        logger.info(
-            f"[Tracing Enabled] MLflow -> {tracking_uri}, Experiment: {experiment_name}"
-        )
-    except Exception as e:
-        logger.warning(
-            f"[Tracing] Failed to configure MLflow tracing at {tracking_uri}. "
-            f"Continuing without tracing. Error: {e}"
-        )
+        _EXPERIMENT_ID = experiment.experiment_id
+        logger.info("MLflow tracing active for experiment %s", _EXPERIMENT_ID)
+    except Exception as exc:
+        # Credential-bearing gateway responses do not belong in workshop logs.
+        logger.warning("MLflow setup failed (%s). Check SDK access, workspace RBAC and gateway TLS; "
+                       "restart grlab-agent after repair. Banking requests can continue.", type(exc).__name__)

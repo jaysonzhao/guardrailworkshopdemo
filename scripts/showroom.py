@@ -44,7 +44,7 @@ def images(oc):
 
 def check_route(origin, namespace, endpoint):
     opener = build_opener(NoRedirect(), HTTPSHandler(context=ssl.create_default_context(cafile=os.getenv("SHOWROOM_ROUTE_CA"))))
-    for path in ("/", "/modules/en/_attachments/lab-files.zip", "/terminal/", "/terminal/ws", "/playground/"):
+    for path in ("/", "/modules/en/_attachments/lab-files.zip", "/terminal/", "/terminal/ws", "/playground/", "/mlflow"):
         for attempt in range(15):
             try:
                 with opener.open(origin+path, timeout=6):

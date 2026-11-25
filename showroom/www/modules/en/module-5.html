@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Module 5 · Remove NeMo and reconnect the app to its model (optional) :: Guardrails for a banking agent on OpenShift</title>
     <link rel="prev" href="module-4.html">
-    <link rel="next" href="appendix-rules.html">
+    <link rel="next" href="module-6.html">
     <meta name="generator" content="Antora 3.1.12">
     <link rel="stylesheet" href="../../_/css/site.css">
     <link rel="stylesheet" href="../../_/css/workshop.css">
@@ -59,6 +59,9 @@
   </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="module-5.html">5 · Remove NeMo and use the model directly (optional)</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="module-6.html">6 · Observe the app with MLflow (optional)</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="appendix-rules.html">Appendix · Choose and try a rule</a>
@@ -180,11 +183,14 @@ oc -n "$LAB_NAMESPACE" get deployment/grlab-rails service/grlab-rails --ignore-n
 <div class="paragraph">
 <p>Append <code>--dry-run</code> to either command to review its exact scope. To resume the guarded path, run <code>./grlab nemo</code>, <code>./grlab rules</code>, and <code>./grlab test --expect rules</code>. Reapply <code>./grlab content</code> if you want the classifier again. The current terminal&#8217;s saved rule overrides are reused. Use the <a href="appendix-rules.html" class="xref page">rule appendix</a> to inspect or change them.</p>
 </div>
+<div class="paragraph">
+<p>If you enabled <a href="module-6.html" class="xref page">MLflow tracing</a>, run <code>./grlab mlflow test</code> after cleanup to record a direct-mode request in the same experiment.</p>
+</div>
 </div>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="module-4.html" class="query-params-link">4 · Test the application</a></span>
-  <span class="next"><a href="appendix-rules.html" class="query-params-link">Appendix · Choose and try a rule</a></span>
+  <span class="next"><a href="module-6.html" class="query-params-link">6 · Observe the app with MLflow (optional)</a></span>
 </nav>
 </article>
 <aside class="toc sidebar" data-title="Contents" data-levels="2">

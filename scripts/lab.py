@@ -47,11 +47,11 @@ def rollout(name, timeout="10m"):
     oc("rollout", "status", "deployment/" + name, "--timeout=" + timeout, capture=False)
 
 
-def build(name, directory):
+def build(name, directory, dockerfile=None):
     apply(resource("image.openshift.io/v1", "ImageStream", name))
     apply(resource("build.openshift.io/v1", "BuildConfig", name, spec={
         "runPolicy": "Serial", "source": {"type": "Binary", "binary": {}},
-        "strategy": {"type": "Docker", "dockerStrategy": {}},
+        "strategy": {"type": "Docker", "dockerStrategy": {"dockerfilePath": dockerfile} if dockerfile else {}},
         "output": {"to": {"kind": "ImageStreamTag", "name": name + ":latest"}},
         "triggers": []}))
     try:
@@ -114,6 +114,8 @@ def agent(mode, image):
         by_name["GRLAB_BACKEND_MODE"] = {"name": "GRLAB_BACKEND_MODE", "value": "proxy", "valueFrom": None}
         del by_name["MAAS_SUBSCRIPTION"]
         container["env"] = list(by_name.values())
+    from mlflow_lab import preserve
+    preserve(sys.modules[__name__], dep, get("deployment", "grlab-agent"))
     apply(dep)
     apply(svc)
     rollout("grlab-agent")
@@ -263,6 +265,10 @@ def check_target():
 
 def main():
     here = sys.modules[__name__]
+    if sys.argv[1:2] == ["mlflow"]:
+        from mlflow_lab import run
+        run(here, sys.argv[2:])
+        return
     if sys.argv[1:2] == ["catalog"]:
         from appendix import run
         run(here, sys.argv[2:])
@@ -271,7 +277,8 @@ def main():
     sub = parser.add_subparsers(dest="step", required=True)
     for name, help_text in (("showroom","deploy the signed-in guide and terminal"),("pre-1","deploy the app in direct mode"),
                             ("nemo","deploy the NeMo proxy"),("rules","activate deterministic rules"),
-                            ("content","deploy and attach the GPU classifier"),("catalog","use the standalone rule appendix")):
+                            ("content","deploy and attach the GPU classifier"),("catalog","use the standalone rule appendix"),
+                            ("mlflow","optional OpenShift AI 3.5 app tracing and dashboard links")):
         sub.add_parser(name, help=help_text)
     test = sub.add_parser("test", help="verify the application and active mode")
     test.add_argument("--expect", choices=("direct", *STAGES))

@@ -1,0 +1,79 @@
+= Module 6 · Observe the banking app with MLflow (optional)
+
+Follow one banking request from the app into the MLflow experiment in your OpenShift AI 3.5.x project. You can start after Pre-1, with NeMo enabled, or after Module 5 has restored the direct model connection. This exercise uses the existing main model and needs no GPU or workbench.
+
+== Instructor · prepare OpenShift AI and the project
+
+Use an instructor workstation with the updated repository, a logged-in OpenShift CLI and the participant's dedicated project in `LAB_NAMESPACE`. Publish the updated Showroom with `./grlab showroom` if the participant is using an older portal. Its Terminal workspace resets when the Showroom pod is replaced, so save local rule selections first.
+
+Start with the read-only precheck. It reports the MLflow Operator, API, shared server, dashboard ingress, project preparation and banking app tracing state. Run it with the instructor's cluster read access for a complete platform result. In the participant Terminal, cluster-wide checks may show as unknown while the project checks still run.
+
+[source,bash]
+----
+./grlab mlflow precheck
+----
+
+On a cluster with MLflow already installed, these commands inspect the shared instance, build the optional app image and grant access in the assigned project.
+
+[source,bash]
+----
+./grlab mlflow platform
+./grlab mlflow prepare
+----
+
+On a dedicated workshop cluster that needs a server, run `./grlab mlflow platform --create-demo` first. It enables the MLflow Operator component on the DataScienceCluster, creates a missing singleton server with SQLite and a 10 GiB RWO PVC, and waits for availability. An existing MLflow instance retains its storage configuration. The demo installation needs a default storage class. Platform setup requires cluster-admin access. Prepare requires Route read access, binary builds and namespaced RBAC administration. A participant's Terminal uses their scoped cluster login.
+
+Prepare discovers the admitted `data-science-gateway` OpenShift Route in `openshift-ingress`. It reads the real host, which can differ from the Route name. On a Gateway-only installation it reads a concrete HTTPS listener. For a custom ingress, supply the canonical dashboard Route as `./grlab mlflow prepare --route NAMESPACE/NAME`. The same option works with `platform`. The SDK sends data to `https://<discovered-host>/mlflow`. The browser opens the Experiments page under `/develop-train/mlflow/experiments` with the project selected.
+
+If the gateway has a private certificate, create a ConfigMap containing its issuing CA bundle and pass it during preparation. The selected Route must terminate HTTPS for the dashboard, and the app pods must be able to reach its hostname.
+
+[source,bash]
+----
+oc -n "$LAB_NAMESPACE" create configmap grlab-ai-ingress-ca \
+  --from-file=ca-bundle.crt=./gateway-ca.pem --dry-run=client -o yaml | oc -n "$LAB_NAMESPACE" apply -f -
+./grlab mlflow prepare --ca-configmap grlab-ai-ingress-ca
+----
+
+Prepare grants the dedicated `grlab-mlflow-writer` service account permission to read and write experiments, runs and traces in this project. The app uses the SDK's `kubernetes-namespaced` authentication and a rotating mounted token. The assigned Showroom user receives experiment read access. Use `--viewer USER` when preparing a project without a Showroom assignment. Use a project visible to the assigned user in the OpenShift AI dashboard.
+
+== Participant · trace your first request
+
+In the Showroom *Terminal*, complete Pre-1 if the banking app has not yet been deployed.
+
+[source,bash,role=execute]
+----
+./grlab mlflow enable
+./grlab mlflow test
+----
+
+The test asks “How do I reset my online banking password?” over the normal chat endpoint. It reads back the exact trace ID returned by that response, verifies the app's root span, and logs a smoke-test run with request latency and span count. A passing result prints the backend (`direct` or `proxy`), trace ID, experiment ID, run ID and your integrated *run URL*. Each deliberate test records one new run. Ordinary playground chats create traces.
+
+== Open the experiment in the OpenShift AI dashboard
+
+In the hosted guide, click link:/mlflow[Open MLflow in OpenShift AI,window=_blank]. The same link appears beside *Banking playground* in the Showroom toolbar. Sign in with your own OpenShift AI account if prompted. With tracing active, the link opens the runs in *guardrail-banking-agent*. The project Experiments page opens while the app or experiment is unavailable.
+
+[source,bash,role=execute]
+----
+./grlab mlflow link
+----
+
+From a downloaded guide, use the URL printed by this command. Before preparation an instructor can run the same command to discover the Route without installing anything. For a custom Route use `./grlab mlflow link --route NAMESPACE/NAME`. In the dashboard, use *Develop & train → Experiments*, select the lab project, then open *guardrail-banking-agent*. Open the latest `banking-smoke-…` run. Compare `request_latency_ms` and `span_count` and inspect the tags `workshop.backend` and `workshop.trace_id`. The exact run URL printed by `test` skips those clicks.
+
+For a comparison, test once in direct mode and again after Module 2. The second run has the `proxy` backend. In the playground try the synthetic OTP example from Module 2. Check the matching trace for `guardrail.outcome=rejected` and the `guardrail.reason` and `guardrail.rail` tags when a rule fires. The root span is named `guardrailed_agent_request`. Open the experiment's trace view when available, or use its *Launch MLflow* control to inspect individual spans. LangChain child spans can include messages and tool results. Use only the supplied fictional examples.
+
+== Stop tracing
+
+[source,bash,role=execute]
+----
+./grlab mlflow disable
+./grlab test
+----
+
+This restores the app image and service account from the original workshop deployment. Your current model connection keeps serving and the experiment history stays available. Module 5 can be used independently to remove NeMo while tracing continues. Run `./grlab mlflow enable` to resume tracing.
+
+== If the link opens but no run appears
+
+* A successful chat alone does not confirm trace export. Run `./grlab mlflow test` and look for the trace ID and the saved run ID.
+* For an inactive tracer, check `oc -n "$LAB_NAMESPACE" logs deploy/grlab-agent -c agent --tail=80` for the startup result. Verify the Route, gateway CA and namespace role. After fixing SDK access, restart the agent and rerun the test.
+* If the dashboard shows another project or denies access, check the workspace in the URL, the signed-in user's project membership and the reader grant. An instructor can check a shared server’s namespace filter with `oc get mlflows.mlflow.opendatahub.io mlflow -o jsonpath='{.spec.workspaceLabelSelector}'`. The app and the browser use different identities.
+* From outside the Showroom network, run `oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080` in another terminal, then `./grlab mlflow test --agent http://127.0.0.1:18080`. The agent can reach MLflow from the cluster.

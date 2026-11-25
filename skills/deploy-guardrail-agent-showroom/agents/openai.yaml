@@ -1,9 +1,9 @@
 interface:
   display_name: Deploy the Guardrail Agent Showroom
-  short_description: Deploy the OpenShift guardrail workshop, embed its console and manage rules
+  short_description: Deploy the guardrail workshop, its embedded console and MLflow tracing
   default_prompt: Use $deploy-guardrail-agent-showroom to deploy the signed-in guide,
     embed the OCP Console through its dedicated ingress, select and test banking rules,
-    or restore the direct model connection on OpenShift.
+    restore direct model access, or trace the banking app with OpenShift AI 3.5.x MLflow and open its dashboard run.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

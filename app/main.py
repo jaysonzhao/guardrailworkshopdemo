@@ -12,13 +12,14 @@ from typing import Any
 import httpx
 import openai
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
     JSONResponse,
     StreamingResponse,
 )
+from guardrailed_agent.observability import router as observability_router
 from guardrailed_agent.agent import get_graph_closure
 from guardrailed_agent.tracing import (
     agent_request_span,
@@ -229,6 +230,9 @@ app = FastAPI(
 )
 
 
+app.include_router(observability_router)
+
+
 def _auth_enabled() -> bool:
     return getenv("AUTH_ENABLED", "false").strip().lower() == "true"
 
@@ -432,7 +436,7 @@ async def _events_with_keepalives(
     description="Creates a model response for the given chat conversation. When `stream=false`, returns a complete `chat.completion` JSON object. When `stream=true`, returns Server-Sent Events with `chat.completion.chunk` deltas.",
     tags=["Chat"],
 )
-async def chat_completions(request: ChatCompletionRequest):
+async def chat_completions(request: ChatCompletionRequest, response: Response):
     global agent_graph
 
     if agent_graph is None:
@@ -444,15 +448,17 @@ async def chat_completions(request: ChatCompletionRequest):
     if request.stream:
         return await _handle_stream(langchain_messages, model_id)
     else:
-        return await _handle_chat(langchain_messages, model_id)
+        return await _handle_chat(langchain_messages, model_id, response)
 
 
-async def _handle_chat(messages: list[HumanMessage], model_id: str) -> dict[str, Any]:
+async def _handle_chat(messages: list[HumanMessage], model_id: str, http_response: Response | None = None) -> dict[str, Any]:
     """Handle non-streaming chat completion."""
     global agent_graph
 
     clear_pending_guardrail_rejection()
     with agent_request_span(_agent_trace_inputs({"messages": messages})) as span:
+        if span is not None and http_response is not None and getattr(span, "trace_id", None):
+            http_response.headers["X-Grlab-Trace-Id"] = span.trace_id
         try:
             try:
                 result = await _invoke_with_retry(

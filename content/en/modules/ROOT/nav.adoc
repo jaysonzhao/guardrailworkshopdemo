@@ -5,4 +5,5 @@
 * xref:module-3.adoc[3 · Add content safety (optional)]
 * xref:module-4.adoc[4 · Test the application]
 * xref:module-5.adoc[5 · Remove NeMo and use the model directly (optional)]
+* xref:module-6.adoc[6 · Observe the app with MLflow (optional)]
 * xref:appendix-rules.adoc[Appendix · Choose and try a rule]

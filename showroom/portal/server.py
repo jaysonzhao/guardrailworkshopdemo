@@ -10,6 +10,7 @@ import re
 import secrets
 import ssl
 import time
+from urllib.parse import parse_qs, urlsplit
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, DummyCookieJar, WSMsgType, web
 
@@ -26,6 +27,7 @@ class Settings:
     www: Path = Path("/opt/showroom/www")
     ttyd: str = "http://127.0.0.1:7681"
     agent: str = "http://grlab-agent:8080"
+    mlflow_link: Path = Path("/etc/showroom-mlflow/project-url")
 
 HTTP = web.AppKey("http", ClientSession)
 HERE = Path(__file__).resolve().parent
@@ -147,6 +149,30 @@ def make_app(cfg):
         async with request.app[HTTP].get(cfg.ttyd + request.path, headers={"X-Workshop-Session":"page"}, allow_redirects=False) as upstream:
             return web.Response(body=await upstream.read(), status=upstream.status, headers={"Content-Type":upstream.headers.get("Content-Type","text/html")})
 
+    async def mlflow_dashboard(request):
+        try:
+            project = urlsplit(cfg.mlflow_link.read_text().strip())
+        except FileNotFoundError:
+            raise web.HTTPConflict(text="The instructor needs to prepare optional Module 6 for this project.") from None
+        page = "/develop-train/mlflow/experiments"
+        if (project.scheme != "https" or not project.hostname or project.username or project.password
+                or project.fragment or project.path != page or parse_qs(project.query) != {"workspace": [cfg.namespace]}):
+            raise web.HTTPServiceUnavailable(text="Check the dashboard Route in Module 6 settings.")
+        target = project.geturl()
+        try:
+            # The browser authenticates to OpenShift AI. Only an internal metadata request is made here.
+            async with request.app[HTTP].get(cfg.agent + "/workshop/mlflow/link", allow_redirects=False,
+                                              timeout=ClientTimeout(total=3)) as response:
+                if response.status == 200:
+                    detail = urlsplit((await response.json())["url"])
+                    if (detail.scheme == "https" and detail.netloc == project.netloc and not detail.fragment
+                            and re.fullmatch(re.escape(page) + r"/[A-Za-z0-9_-]+/runs", detail.path)
+                            and parse_qs(detail.query).get("workspace") == [cfg.namespace]):
+                        target = detail.geturl()
+        except (ClientError, TimeoutError, ValueError, KeyError):
+            pass
+        raise web.HTTPFound(location=target)
+
     async def playground(request):
         path = request.path.removeprefix("/playground")
         async with request.app[HTTP].request(request.method, cfg.agent+path, data=await request.read(), headers={"Content-Type":"application/json"},
@@ -163,6 +189,7 @@ def make_app(cfg):
     app.on_response_prepare.append(headers)
     app.router.add_get("/", home)
     app.router.add_get("/session", info)
+    app.router.add_get("/mlflow", mlflow_dashboard)
     app.router.add_get("/portal/{asset:portal[.]css|portal[.]js}", asset)
     app.router.add_get("/terminal/ws", terminal_ws)
     for path in ("/terminal/","/terminal/token"):
