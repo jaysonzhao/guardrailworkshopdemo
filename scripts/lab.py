@@ -20,7 +20,12 @@ NS = os.environ.get("LAB_NAMESPACE", "")
 
 
 def oc(*args, data=None, capture=True):
-    result = subprocess.run(["oc", "-n", NS, *args], input=data, text=True,
+    command = ["oc"]
+    explicit_scope = any(arg in ("-n", "--namespace", "-A", "--all-namespaces")
+                         or arg.startswith("--namespace=") for arg in args)
+    if NS and not explicit_scope:
+        command.extend(("-n", NS))
+    result = subprocess.run([*command, *args], input=data, text=True,
                             stdout=subprocess.PIPE if capture else None, check=True)
     return (result.stdout or "").strip()
 
@@ -70,7 +75,8 @@ def built_image(name):
     image = oc("get", "istag", name + ":latest", "--ignore-not-found", "-o",
                "jsonpath={.image.dockerImageReference}")
     if "@sha256:" not in image:
-        raise RuntimeError(f"The instructor has not prebuilt {name}:latest. Run ./grlab showroom with the instructor's build-enabled context first.")
+        prepare = "./grlab otel prepare" if name == "grlab-rails-otel" else "./grlab showroom"
+        raise RuntimeError(f"The instructor has not prebuilt {name}:latest. Run {prepare} with the instructor's build-enabled context first.")
     return image
 
 
@@ -159,15 +165,17 @@ def verify(stage):
 
 
 def mount_profile(stage, image, settings):
+    from nemo_otel import keep_tracing, preserve_template
+    proxy = get("deployment", "grlab-rails")
     active_ids = None
     if stage in ("rules", "content"):
         from catalog_cli import current, selected
         import rulebook
-        proxy = get("deployment", "grlab-rails")
         _, mounted = current(sys.modules[__name__], proxy)
         _, entries = rulebook.catalog()
         active_ids = rulebook.resolve(entries, rulebook.selection(entries), selected(mounted))
     data = render(stage, settings["model"], settings["url"], settings.get("subscription", ""), active_ids=active_ids)
+    data = keep_tracing(data, proxy)
     # Restore the proxy ingress rule when Module 1 is repeated after optional cleanup.
     for doc in manifests("network.yaml"):
         if doc["metadata"]["name"] == "grlab-rails-ingress":
@@ -190,6 +198,7 @@ def mount_profile(stage, image, settings):
     pod["volumes"][0]["configMap"]["name"] = cm_name
     if stage == "content":
         container["env"].append({"name": "NEMOTRON_API_KEY", "value": "workshop-local"})
+    preserve_template(dep, proxy)
     apply(svc)
     apply(dep)
     rollout("grlab-rails")
@@ -265,6 +274,10 @@ def check_target():
 
 def main():
     here = sys.modules[__name__]
+    if sys.argv[1:2] == ["otel"]:
+        from nemo_otel import run
+        run(here, sys.argv[2:])
+        return
     if sys.argv[1:2] == ["mlflow"]:
         from mlflow_lab import run
         run(here, sys.argv[2:])
@@ -278,7 +291,8 @@ def main():
     for name, help_text in (("showroom","deploy the signed-in guide and terminal"),("pre-1","deploy the app in direct mode"),
                             ("nemo","deploy the NeMo proxy"),("rules","activate deterministic rules"),
                             ("content","deploy and attach the GPU classifier"),("catalog","use the standalone rule appendix"),
-                            ("mlflow","optional OpenShift AI 3.5 app tracing and dashboard links")):
+                            ("mlflow","optional OpenShift AI 3.5 app tracing and dashboard links"),
+                            ("otel","optional native NeMo OpenTelemetry tracing")):
         sub.add_parser(name, help=help_text)
     test = sub.add_parser("test", help="verify the application and active mode")
     test.add_argument("--expect", choices=("direct", *STAGES))

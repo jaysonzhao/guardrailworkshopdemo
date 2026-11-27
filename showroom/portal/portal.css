@@ -16,7 +16,7 @@ main{display:grid;grid-template-columns:minmax(0,var(--guide-width,46%)) 12px mi
 #splitter:focus-visible{box-shadow:inset 0 0 0 2px #1264a3}
 body.resizing{cursor:col-resize;user-select:none}
 .toolbar,nav{min-height:45px;background:#f3f6f8;border-bottom:1px solid #cbd3da}
-.toolbar a{margin-left:auto}
+.toolbar{flex-wrap:wrap;column-gap:.85rem;row-gap:.25rem}.toolbar strong{margin-right:auto}.toolbar a{white-space:nowrap}
 nav{padding:0 .5rem}
 nav a,nav button{font:inherit;font-weight:650;background:transparent;display:inline-flex;align-items:center;align-self:stretch;padding:0 .9rem;text-decoration:none;color:#243746;border:0;border-bottom:3px solid transparent;cursor:pointer}
 nav [aria-pressed=true],nav .chosen{background:#fff;border-color:#1264a3;color:#07548c}

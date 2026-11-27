@@ -1,0 +1,105 @@
+= Module 7 · Trace NeMo guardrail decisions with OpenTelemetry (optional)
+
+Find out where a banking request spends its time and which rail stops a request containing a fictional one-time password. You will trace the NeMo proxy itself. Module 6 traces the banking application in MLflow. Each module can run independently, and both can be enabled in the same project.
+
+== Precheck · see what is installed
+
+Run the read-only inventory from a shell logged in to OpenShift. It can inspect the cluster from any current project, including `default`. Set `LAB_NAMESPACE` to check resources and permissions for a particular workshop project. An instructor can discover shared components across namespaces. The participant Terminal reports what its scoped identity can see.
+
+[source,bash,role=execute]
+----
+./grlab otel precheck
+----
+
+If you know the observability team's project, use `./grlab otel precheck --observability-namespace "$TRACING_NAMESPACE"`. The report shows the TempoStack, TempoMonolithic, Kiali and OpenTelemetry Collector APIs and instances, available readiness conditions, candidate Services and admitted HTTPS Routes. It also checks the NeMo deployment, private Jaeger, prepared settings, optional image and instructor permissions. The inventory also checks commonly labelled Tempo and Kiali pods for installations outside the operators. An API with zero instances, an absent API and a restricted view have different meanings.
+
+* If the cluster has no Tempo or Kiali, use the project-local Jaeger exercise below. It needs neither operator.
+* If Tempo is available, confirm its receiver, HTTP query API, UI login and tenant with the owner before selecting the shared-backend exercise. Kiali is an optional service-mesh viewer. Its presence alone does not verify storage or OTLP ingestion.
+* If access is restricted, have the instructor run the same read-only command or use the already prepared project backend. A completed prepare and a matching stored trace provide separate readiness and data-path checks.
+
+== Instructor · prepare the tracing backend
+
+Use the updated full repository, the instructor's logged-in `oc` context and the participant's project in `LAB_NAMESPACE`. The participant uses the Showroom Terminal. If you are upgrading an existing portal, save Terminal-local edits first, then run `./grlab showroom` from the updated ZIP to publish the new guide, CLI and toolbar link.
+
+[source,bash]
+----
+./grlab otel prepare
+----
+
+Prepare repeats the inventory before making changes. It builds a separate NeMo 0.24.1 image with the OpenTelemetry SDK and gRPC exporter. It deploys a private Jaeger instance inside the lab project. Jaeger collects up to 1,000 traces in memory. Replacing its pod discards its history. The proxy can send traces on port 4317. The signed-in Showroom can read the query UI on port 16686. You can also use a shared collector and Tempo as described below. The instructor needs build, image and namespaced workload permissions. This module needs no GPU.
+
+== Participant · enable native tracing
+
+Start after Module 1. For the allowed-and-blocked comparison, complete Module 2 with the *credential* rule active. Module 3 also works. If you already removed NeMo in Module 5, run `./grlab nemo` and `./grlab rules` to restore the guarded path.
+
+[source,bash,role=execute]
+----
+./grlab otel enable
+./grlab otel status
+./grlab otel test
+----
+
+The test sends two synthetic requests directly to the private NeMo chat endpoint, each with a new W3C trace ID. It reads those exact IDs back from storage and checks the native NeMo spans. Allow several seconds for batching. In Module 1, or with the credential rule deselected, the test prints why it skipped the OTP comparison.
+
+[cols="2,3",options="header"]
+|===
+|Request |Evidence to find in the trace
+|How do I reset my online banking password? |The HTTP span contains `guardrails.request`. Inspect input and output rail durations and the model-call duration.
+|My OTP is 000000. |The response is a privacy refusal. Find `rail.name=banking input gate`, `rail.type=input` and `rail.stop=true`. The default policy stops before the main model call.
+|===
+
+On the hosted Showroom, click link:/nemo-traces/[Open NeMo traces,window=_blank] or *NeMo traces* in the toolbar. The private Jaeger demo opens through the authenticated Showroom Route. Search for service `nemo-guardrails`. You can also open the trace URL printed by the test. Expand the HTTP span, then `guardrails.request` and its rail and action spans. Compare the main model's duration with the duration of `banking_local_input`. Your model and latency will differ from other participants'.
+
+Jaeger can label a test trace *Incomplete* because the CLI supplies a synthetic client parent and exports spans from NeMo only. Expand the actual model span and inspect its model name to count main-model calls. The UI’s GenAI summary can also count the native request span.
+
+[source,bash,role=execute]
+----
+./grlab otel link
+----
+
+From an instructor workstation without the hosted portal, forward `svc/grlab-jaeger` to `16686:16686` and open `http://localhost:16686/nemo-traces/`. To run the same test from that workstation, forward `svc/grlab-rails` to `18000:80` in a second terminal. Run `./grlab otel test --proxy http://127.0.0.1:18000/v1 --query-url http://127.0.0.1:16686/nemo-traces` in a third.
+
+== Inspect the proxy configuration
+
+The module copies the mounted policy to a new immutable ConfigMap and adds the following section to `config.yaml`. Your active rules, category choices, provider configuration and Secrets carry over.
+
+[source,yaml]
+----
+tracing:
+  enabled: true
+  span_format: opentelemetry
+  enable_content_capture: false
+  adapters:
+    - name: OpenTelemetry
+----
+
+The proxy uses `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME=nemo-guardrails`, `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` and `OTEL_METRICS_EXPORTER=none`. The optional image initializes the SDK before NeMo starts. Metadata mode exports rail names, stop decisions, span timing, model identifiers and available token counts. It filters prompt text, action parameters and HTTP headers before export. For a synthetic-data demonstration only, `./grlab otel enable --capture-content` allows message content in new traces. Run `./grlab otel enable` again to return to metadata mode. Existing stored traces keep their original contents.
+
+== Instructor alternative · use an existing collector and Tempo
+
+Identify the OTLP/gRPC ingestion endpoint, the HTTP query API and the authenticated UI Route. Use the gateway or collector your administrator has configured for the workshop tenant. The following variables represent those existing addresses.
+
+[source,bash]
+----
+./grlab otel prepare \
+  --endpoint "$OTLP_GRPC_URL" \
+  --query-url "$TEMPO_QUERY_BASE_URL" --query-api tempo \
+  --ui-route "$TRACING_UI_ROUTE"
+----
+
+`TRACING_UI_ROUTE` is `namespace/route-name`. Check the shared UI in a signed-out browser, then sign in as the participant and verify access to the workshop tenant. Use `--ui-path` for a custom UI base path. With a shared Jaeger v3 query endpoint, set `--query-api jaeger`. The query base can include a tenant gateway prefix. The CLI appends `/api/traces/<id>` for Tempo or `/api/v3/traces/<id>` for Jaeger. Re-run `enable` to roll out changed settings.
+
+For an HTTPS receiver with private trust or authentication, pass `--ca-configmap NAME` (project ConfigMap key `ca.crt`) and, when required, `--headers-secret NAME` (project Secret key `headers` in OTLP header-list format). For a protected HTTPS query endpoint, pass `--query-ca-file`, `--query-token-file` and `--tenant` as appropriate to `test`. The browser signs in to the shared UI separately.
+
+== Disable tracing or remove the local demo
+
+[source,bash,role=execute]
+----
+./grlab otel disable
+./grlab otel status
+./grlab test
+----
+
+Disable restores the regular NeMo image and keeps the currently mounted rules, including changes made in the appendix while tracing was on. Module 5 independently removes the proxy. After that, direct model calls produce no new NeMo spans, and Module 6 can still trace the app. When the class is finished, the instructor can run `./grlab otel remove-demo` to delete the workshop Jaeger resources and their in-memory history.
+
+If the probe cannot find a trace, check `oc -n "$LAB_NAMESPACE" logs deploy/grlab-rails -c nemo --tail=80`, the receiver protocol and port, pod egress, certificate trust, tenant and query read permissions. A successful chat proves the model path worked. A `PASS` with a trace ID proves the exporter and query path worked. For a sampled shared backend, arrange for the two sampled workshop requests to be retained.

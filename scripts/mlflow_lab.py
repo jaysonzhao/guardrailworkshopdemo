@@ -28,7 +28,12 @@ PAGE = "/develop-train/mlflow/experiments"
 
 def quiet_oc(lab, *args):
     """Run a read without exposing expected scoped-RBAC denials on stderr."""
-    command = ["oc", "-n", lab.NS, *args]
+    command = ["oc"]
+    explicit_scope = any(arg in ("-n", "--namespace", "-A", "--all-namespaces")
+                         or arg.startswith("--namespace=") for arg in args)
+    if lab.NS and not explicit_scope:
+        command.extend(("-n", lab.NS))
+    command.extend(args)
     result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode:
         raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)

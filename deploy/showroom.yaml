@@ -104,6 +104,7 @@ spec:
           securityContext: *restricted
           volumeMounts:
             - {name: sessions, mountPath: /run/workshop}
+            - {name: nemo-traces, mountPath: /etc/showroom-nemo-tracing, readOnly: true}
             - {name: mlflow-link, mountPath: /etc/showroom-mlflow, readOnly: true}
             - {name: api-ca, mountPath: /run/api-ca, readOnly: true}
         - name: terminal
@@ -126,6 +127,11 @@ spec:
               - secret: {name: grlab-oauth-client, items: [{key: token, path: token}]}
               - configMap: {name: kube-root-ca.crt, items: [{key: ca.crt, path: ca.crt}]}
               - downwardAPI: {items: [{path: namespace, fieldRef: {fieldPath: metadata.namespace}}]}
+        - name: nemo-traces
+          configMap:
+            name: grlab-nemo-otel-settings
+            optional: true
+            items: [{key: mode, path: mode}, {key: ui, path: ui}]
         - name: mlflow-link
           configMap:
             name: grlab-mlflow-settings

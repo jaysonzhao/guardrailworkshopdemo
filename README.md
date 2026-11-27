@@ -87,6 +87,12 @@ After Pre-1, run the read-only `./grlab mlflow precheck` to inspect the Operator
 
 In the Showroom Terminal run `./grlab mlflow enable`, then `./grlab mlflow test`. Open **MLflow in OpenShift AI** in the portal or the run URL printed by the test. The saved run includes request latency, span count, backend and the trace ID for the synthetic banking chat. `./grlab mlflow link` prints the project Experiments page. `./grlab mlflow disable` restores the original app image and keeps the experiment history. See the [participant module](content/en/modules/ROOT/pages/module-6.adoc) and the [instructor instructions](skills/deploy-guardrail-agent-showroom/SKILL.md).
 
+## Optional Module 7 · NeMo OpenTelemetry traces
+
+From the instructor workstation, run `./grlab otel precheck` to inventory Tempo, Kiali, collectors, visible Routes and project permissions. If those operators are absent, run `./grlab otel prepare` to build the instrumented NeMo proxy and deploy a project-local in-memory Jaeger backend. It can also use an existing OTLP/gRPC collector and a Tempo or Jaeger query API. The participant runs `./grlab otel enable` and `./grlab otel test`, then clicks **NeMo traces** in the signed-in Showroom. Each test request gets its own trace ID. The test verifies the HTTP and native NeMo spans in storage. Module 2's default policy produces an allowed reset trace and an OTP trace stopped by the banking input rail. Message capture is off by default.
+
+Use `./grlab otel disable` to restore the regular proxy image and keep the active rules. `./grlab otel remove-demo` deletes the project-local demo and its in-memory history. The banking app's MLflow module can be enabled independently. [Participant exercise](content/en/modules/ROOT/pages/module-7.adoc) · [Instructor guide and shared-backend settings](skills/deploy-guardrail-agent-showroom/references/nemo-opentelemetry.md)
+
 ## Rebuild or test locally
 
 To rebuild the site and its downloadable code after an edit, install Node.js 20+, npm, Git and Python, then run `bash scripts/build-site.sh`. A clean ZIP works as the input. The script installs pinned Antora dependencies if needed and generates a temporary Git worktree. The theme bundle is included.

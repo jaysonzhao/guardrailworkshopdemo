@@ -77,3 +77,5 @@ This restores the app image and service account from the original workshop deplo
 * For an inactive tracer, check `oc -n "$LAB_NAMESPACE" logs deploy/grlab-agent -c agent --tail=80` for the startup result. Verify the Route, gateway CA and namespace role. After fixing SDK access, restart the agent and rerun the test.
 * If the dashboard shows another project or denies access, check the workspace in the URL, the signed-in user's project membership and the reader grant. An instructor can check a shared server’s namespace filter with `oc get mlflows.mlflow.opendatahub.io mlflow -o jsonpath='{.spec.workspaceLabelSelector}'`. The app and the browser use different identities.
 * From outside the Showroom network, run `oc -n "$LAB_NAMESPACE" port-forward svc/grlab-agent 18080:8080` in another terminal, then `./grlab mlflow test --agent http://127.0.0.1:18080`. The agent can reach MLflow from the cluster.
+
+For the proxy’s own rail, model and action spans, open xref:module-7.adoc[Module 7 · Trace NeMo decisions with OpenTelemetry].

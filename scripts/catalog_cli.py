@@ -52,6 +52,10 @@ def revise(lab, dry, rules, edits):
         spec = json.loads(data["active_rules.json"])
         spec["keyword_patterns"] = live_regex
         data["active_rules.json"] = json.dumps(spec, sort_keys=True)
+    if "tracing" in live_cfg:
+        cfg = yaml.safe_load(data["config.yaml"])
+        cfg["tracing"] = live_cfg["tracing"]
+        data["config.yaml"] = yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True)
     digest = hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()[:12]
     new_name = f"grlab-{stage}-{digest}"
     print("NeMo ConfigMap:",old_name,"→",new_name)

@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: grlab-jaeger-config}
+data:
+  jaeger.yaml: |
+    extensions:
+      jaeger_storage:
+        backends:
+          workshop:
+            memory:
+              max_traces: 1000
+      jaeger_query:
+        storage: {traces: workshop}
+        base_path: /nemo-traces
+        http: {endpoint: "0.0.0.0:16686"}
+    receivers:
+      otlp:
+        protocols:
+          grpc: {endpoint: "0.0.0.0:4317"}
+    processors:
+      batch: {timeout: 1s}
+    exporters:
+      jaeger_storage_exporter: {trace_storage: workshop}
+    service:
+      extensions: [jaeger_storage, jaeger_query]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [jaeger_storage_exporter]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: grlab-jaeger-ingress}
+spec:
+  podSelector: {matchLabels: {app: grlab-jaeger}}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app: grlab-rails}}}]
+      ports: [{port: 4317, protocol: TCP}]
+    - from: [{podSelector: {matchLabels: {app: grlab-showroom}}}]
+      ports: [{port: 16686, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grlab-jaeger}
+spec:
+  selector: {app: grlab-jaeger}
+  ports:
+    - {name: otlp-grpc, port: 4317, targetPort: otlp-grpc}
+    - {name: query, port: 16686, targetPort: query}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: grlab-jaeger}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: grlab-jaeger}}
+  template:
+    metadata: {labels: {app: grlab-jaeger}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: jaeger
+          image: cr.jaegertracing.io/jaegertracing/jaeger:2.23.0
+          args: ["--config=/etc/grlab/jaeger.yaml"]
+          ports:
+            - {name: otlp-grpc, containerPort: 4317}
+            - {name: query, containerPort: 16686}
+          readinessProbe: {httpGet: {path: /nemo-traces/, port: query}, periodSeconds: 5}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: settings, mountPath: /etc/grlab, readOnly: true}]
+      volumes: [{name: settings, configMap: {name: grlab-jaeger-config}}]

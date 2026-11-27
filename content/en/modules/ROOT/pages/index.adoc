@@ -13,6 +13,7 @@ A customer who asks how to reset a password should get instructions. A customer 
 |xref:module-4.adoc[4] |Exercise the application and inspect the active profile. |The automated check passes through the app on either learning path.
 |xref:module-5.adoc[5 · optional] |Remove NeMo and restore direct mode. |The app still answers and returns the fixture balance after the proxy is removed.
 |xref:module-6.adoc[6 · optional] |Trace app requests in your OpenShift AI 3.5.x project. |Open the matching run in the integrated MLflow dashboard.
+|xref:module-7.adoc[7 · optional] |Trace the NeMo service with OpenTelemetry. |Open the exact allowed and blocked requests and inspect the rail that stopped the OTP.
 |xref:appendix-rules.adoc[Appendix] |Choose by category and enable one rule at a time. |Each card pairs a guarded example with an allowed control.
 |===
 

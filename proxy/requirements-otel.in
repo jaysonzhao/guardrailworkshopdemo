@@ -1,0 +1,5 @@
+-r requirements.txt
+nemoguardrails[server,tracing]==0.24.1
+opentelemetry-sdk==1.45.2
+opentelemetry-exporter-otlp-proto-grpc==1.45.2
+opentelemetry-instrumentation-fastapi

@@ -1,6 +1,6 @@
 ---
 name: deploy-guardrail-agent-showroom
-description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, an embedded OCP Console without a popup, a dedicated workshop console ingress, participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, optional GPU Nemotron Safety Guard, per-category rule selection, optional NeMo removal with a verified direct model connection, and optional banking-app observability with OpenShift AI 3.5.x MLflow and Route-discovered dashboard links.
+description: Deploy, teach or verify the guardrail-agent-showroom repository ZIP on OpenShift. Use for the OpenShift OAuth Showroom, an embedded OCP Console without a popup, a dedicated workshop console ingress, participant Terminal tabs, executable workshop CLI, the LangGraph banking application, NeMo rules-only labs, optional GPU Nemotron Safety Guard, per-category rule selection, optional NeMo removal with a verified direct model connection, and optional banking-app observability with OpenShift AI 3.5.x MLflow and Route-discovered dashboard links, and NeMo OpenTelemetry tracing with Jaeger or Tempo.
 ---
 
 # Deploy the Guardrail Agent Showroom
@@ -9,11 +9,11 @@ Use this skill with the supplied `guardrail-agent-showroom.zip` or its extracted
 
 ## Start with the participant's requested action
 
-For OpenShift AI MLflow, tracing, runs or a dashboard link, jump to **Optional Module 6 · observe the banking app with MLflow**. For a console-only change, jump to **Embed OCP Console in the Showroom**. A running portal can be updated independently of the banking app and NeMo modules. For an appendix browse, selection, dry run or local test, jump directly to **Use the appendix at any time**. In the hosted Terminal the files and Python dependency are already present. For an offline workstation, use the extracted participant or repository directory and install `requirements.txt` if necessary. Skip OpenShift sign-in, permission checks, build checks and provider setup for this path. Use the cluster setup below for publishing, live testing or deploying the Showroom.
+For NeMo rail decisions, OpenTelemetry, Jaeger or Tempo, jump to **Optional Module 7 · trace NeMo Guardrails with OpenTelemetry**. For OpenShift AI MLflow, banking-app traces, runs or an AI dashboard link, jump to **Optional Module 6 · observe the banking app with MLflow**. For a console-only change, jump to **Embed OCP Console in the Showroom**. A running portal can be updated independently of the banking app and NeMo modules. For an appendix browse, selection, dry run or local test, jump directly to **Use the appendix at any time**. In the hosted Terminal the files and Python dependency are already present. For an offline workstation, use the extracted participant or repository directory and install `requirements.txt` if necessary. Skip OpenShift sign-in, permission checks, build checks and provider setup for this path. Use the cluster setup below for publishing, live testing or deploying the Showroom.
 
 ## Establish the target and requested stopping point
 
-Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise. Run optional Module 5 only for a request to remove NeMo or restore a direct model connection. Run Module 6 when the user asks for application observability. It works after Pre-1 with or without NeMo. The appendix is independent of the numbered modules. Use it before Pre-1, during a module, or after cleanup.
+Use the logged-in OpenShift CLI. Inspect `oc whoami`, `oc whoami --show-server`, and the assigned project. Set `LAB_NAMESPACE` to an explicitly chosen dedicated project. Create it if provisioning that project is part of the request. Use a dedicated project and a different Showroom instance per participant. Discover whether the user wants only the guide, a particular module, or the complete rules-only installation. A full workshop deployment defaults to the guide plus Pre-1, 1, 2 and 4. Run Module 3 when the user chooses the GPU exercise. Run optional Module 5 only for a request to remove NeMo or restore a direct model connection. Run Module 6 when the user asks for application observability. It works after Pre-1 with or without NeMo. Run Module 7 on request after Module 1. It can coexist with Module 6 and uses no GPU. The appendix is independent of the numbered modules. Use it before Pre-1, during a module, or after cleanup.
 
 Verify Python 3.10+, PyYAML 6 and a working OpenShift 4.x CLI. Check the permissions and build APIs needed for the selected steps.
 
@@ -299,6 +299,38 @@ From the Showroom Terminal execute the participant steps in direct or guarded mo
 Match the chat trace ID to the persisted MLflow trace, check the `guardrailed_agent_request` root and verify the saved smoke run, latency, span count and current backend. Open **MLflow in OpenShift AI** beside **Banking playground** or the Module 6 page link. It enters the integrated experiment in the workshop project. Give the user the full clickable OpenShift AI URL printed by `test` for the exact run and by `link` for the project's Experiments page. Use `/mlflow` on the dashboard host as the SDK tracking endpoint. Its integrated browser path starts at `/develop-train/mlflow/experiments`. If operating outside the cluster, forward `svc/grlab-agent` to local port 18080 and use `./grlab mlflow test --agent http://127.0.0.1:18080`.
 
 To turn off app observability on request, run `./grlab mlflow disable` followed by `./grlab test`. The current model backend is preserved. The experiment stays accessible. For RBAC checks, private CA configuration, trace details or troubleshooting, see [Module 6 operations](references/mlflow-observability.md).
+
+## Optional Module 7 · trace NeMo Guardrails with OpenTelemetry
+
+Use the full updated repository to prepare the proxy image and tracing backend. The participant needs Module 1 and the updated CLI in the Terminal. For the refused-request exercise, activate the Module 2 or 3 profile with the credential rule. If updating an existing portal, preserve terminal-local edits and republish the guide with `./grlab showroom` to add the toolbar link.
+
+Start with `./grlab otel precheck` in the logged-in instructor context. It can inventory from any current project, including `default`. Set `LAB_NAMESPACE` for checks specific to a participant project and before preparing that project. For an inventory-only request, run it and report the results before making any changes. It checks the TempoStack, TempoMonolithic, Kiali and OpenTelemetry Collector APIs and instances, visible readiness, candidate OTLP Services and admitted tracing Routes, project resources and instructor permissions. Supply `--observability-namespace NAMESPACE` to scope shared discovery. The inventory also checks common pod labels for installations outside these operators. Report access restrictions as unknown. Use private project-local Jaeger when no usable shared tracing backend is available. A shared Tempo instance works with Kiali absent. Verify the receiver, query API, tenant and authorized viewer, such as Grafana or Jaeger, before choosing it. The participant can run precheck with their scoped identity. An independently installed backend can be used if its endpoints are known.
+
+From the instructor workstation, select the participant project in `LAB_NAMESPACE` and run the command below. Prepare repeats the precheck before building the optional NeMo image and deploying private, in-memory Jaeger inside the project. The signed-in Showroom reads its query UI through its existing Route.
+
+~~~bash
+./grlab otel prepare
+~~~
+
+When the user specifies an existing collector and Tempo, run the following prepare command instead. The ingestion URL must support OTLP/gRPC. The query URL must reach Tempo's HTTP API, including the tenant gateway prefix when applicable. For an existing Jaeger Query v3 service use `--query-api jaeger`. Set `TRACING_UI_ROUTE` to the actual `namespace/route-name` of the authenticated browser UI. The instructor CLI discovers its admitted HTTPS hostname. Verify the shared UI challenges a signed-out browser and that the participant can read the workshop tenant after sign-in. Use `--ui-path` if the UI lives at a custom path. For private TLS or authenticated export supply the project `--ca-configmap NAME` and `--headers-secret NAME` as appropriate.
+
+~~~bash
+./grlab otel prepare --endpoint "$OTLP_GRPC_URL" \
+  --query-url "$TEMPO_QUERY_BASE_URL" --query-api tempo \
+  --ui-route "$TRACING_UI_ROUTE"
+~~~
+
+In the participant Terminal, enable the adapter on the existing proxy. The command copies the live policy into an immutable ConfigMap, keeps its rules and switches the proxy image to one with an initialized OTel SDK. Content capture defaults to off. `enable --capture-content` opts into message capture for synthetic data. Re-run plain `enable` to return to metadata mode or after changing the prepared backend.
+
+~~~bash
+./grlab otel enable
+./grlab otel test
+./grlab otel link
+~~~
+
+Require a new trace ID from storage with an HTTP parent and native `guardrails.request` child. The allowed synthetic reset question should show input, model and output spans under the rules profile. The fictional OTP should produce a privacy refusal and a stopped input rail when `credential` is active. Bootstrap provides the allowed control only. Open **NeMo traces** or report the clickable URL from `link`. For the private demo, give the direct trace URLs printed by `test`. For a shared UI, give its URL and the matched trace IDs. For a protected query gateway use `test --query-ca-file FILE --query-token-file FILE --tenant TENANT` as applicable. Keep credentials in private files.
+
+Check `./grlab otel status` to see the current mode. On request run `./grlab otel disable`, then `./grlab test` to verify the banking app continues using its current rules. To discard the demo's in-memory history, run `./grlab otel remove-demo` from the instructor context. Module 5 can independently remove the NeMo proxy and leave the app calling the model directly. The standalone reference documents port-forward verification, Tempo tenancy, native span evidence, and the equivalent Red Hat OpenShift AI 3.5 `NemoGuardrails` custom-resource configuration. [Module 7 operations](references/nemo-opentelemetry.md)
 
 ## Diagnose and report
 

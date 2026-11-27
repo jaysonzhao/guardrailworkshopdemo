@@ -28,6 +28,8 @@ class Settings:
     ttyd: str = "http://127.0.0.1:7681"
     agent: str = "http://grlab-agent:8080"
     mlflow_link: Path = Path("/etc/showroom-mlflow/project-url")
+    tracing_settings: Path = Path("/etc/showroom-nemo-tracing")
+    jaeger: str = "http://grlab-jaeger:16686"
 
 HTTP = web.AppKey("http", ClientSession)
 HERE = Path(__file__).resolve().parent
@@ -173,6 +175,34 @@ def make_app(cfg):
             pass
         raise web.HTTPFound(location=target)
 
+    async def nemo_traces(request):
+        try:
+            mode = (cfg.tracing_settings / "mode").read_text().strip()
+        except FileNotFoundError:
+            raise web.HTTPConflict(text="Ask the instructor to prepare optional Module 7.") from None
+        if mode == "external":
+            target = (cfg.tracing_settings / "ui").read_text().strip()
+            parsed = urlsplit(target)
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username is not None or parsed.password is not None:
+                raise web.HTTPConflict(text="Use the shared tracing UI or ask the instructor to configure its Route.")
+            raise web.HTTPFound(location=target.rstrip("/") + "/")
+        if mode != "demo":
+            raise web.HTTPConflict(text="Check the Module 7 backend settings.")
+        if request.path == "/nemo-traces":
+            raise web.HTTPFound(location="/nemo-traces/")
+        # The upstream is fixed. Only the existing owner-authenticated GET surface
+        # is exposed. Jaeger receives no OpenShift token, cookies or user headers.
+        async with request.app[HTTP].get(cfg.jaeger + request.rel_url.raw_path_qs,
+                                         headers={"Accept": request.headers.get("Accept", "*/*")},
+                                         allow_redirects=False) as upstream:
+            reply = web.StreamResponse(status=upstream.status,
+                     headers={"Content-Type": upstream.headers.get("Content-Type", "application/octet-stream")})
+            await reply.prepare(request)
+            async for chunk in upstream.content.iter_any():
+                await reply.write(chunk)
+            await reply.write_eof()
+            return reply
+
     async def playground(request):
         path = request.path.removeprefix("/playground")
         async with request.app[HTTP].request(request.method, cfg.agent+path, data=await request.read(), headers={"Content-Type":"application/json"},
@@ -190,6 +220,8 @@ def make_app(cfg):
     app.router.add_get("/", home)
     app.router.add_get("/session", info)
     app.router.add_get("/mlflow", mlflow_dashboard)
+    app.router.add_get("/nemo-traces", nemo_traces)
+    app.router.add_get("/nemo-traces/{tail:.*}", nemo_traces)
     app.router.add_get("/portal/{asset:portal[.]css|portal[.]js}", asset)
     app.router.add_get("/terminal/ws", terminal_ws)
     for path in ("/terminal/","/terminal/token"):
